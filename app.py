@@ -645,14 +645,27 @@ with testing_tab:
 
             st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
             
-            # Use the clean subset of columns up to Stiffness (if it exists)
-            display_cols = [c for c in p_cmj.columns if c not in ["Name", "Date_Str", "Jump_Height_Clean", "RSI_Clean", "Test Type", "Sport"]]
-            stiffness_col = next((c for c in display_cols if "stiffness" in c.lower()), None)
-            if stiffness_col:
-                end_idx = display_cols.index(stiffness_col) + 1
-                display_cols = display_cols[:end_idx]
-
-            df_cmj_display = p_cmj[display_cols].copy()
+            # Find the actual columns in the dataframe that contain Jump Height and RSI
+            jh_col = next((c for c in p_cmj.columns if "jump height" in c.lower()), None)
+            rsi_col = next((c for c in p_cmj.columns if "rsi" in c.lower()), None)
+            
+            # Build the strict list of columns in the exact order you requested
+            target_cols = ["Test Type", "Date", "BW [KG]"]
+            if jh_col: target_cols.append(jh_col)
+            target_cols.extend(["Peak Power [W]", "Eccentric Braking RFD [N/s]"])
+            if rsi_col: target_cols.append(rsi_col)
+            target_cols.extend(["Concentric Peak Velocity [m/s]", "CMJ Stiffness [N/m]"])
+            
+            # Filter to only the columns that actually exist to prevent crash errors
+            final_cols = [c for c in target_cols if c in p_cmj.columns]
+            
+            df_cmj_display = p_cmj[final_cols].copy()
+            
+            # Rename the long VALD names to your clean requested names
+            rename_map = {}
+            if jh_col: rename_map[jh_col] = "Jump Height (cm)"
+            if rsi_col: rename_map[rsi_col] = "RSI [m/s]"
+            df_cmj_display = df_cmj_display.rename(columns=rename_map)
             
             # Hide empty/NaN columns exactly like we did in the ForceFrame logs
             df_cmj_display = df_cmj_display.replace(["N/A", "NaN", "nan", ""], pd.NA).dropna(axis=1, how='all').fillna("")
@@ -660,6 +673,7 @@ with testing_tab:
             st.markdown(render_vball_table(df_cmj_display), unsafe_allow_html=True)
         else:
             st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")
+            
             
     # SECTION 5C: OVERALL PROFILE
     with testing_tab_overall:
