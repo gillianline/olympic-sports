@@ -399,12 +399,17 @@ with testing_tab_intake:
             if not hip_ath.empty:
                 l_col = next((c for c in hip_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
                 r_col = next((c for c in hip_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
-                dir_col = next((c for c in hip_ath.columns if "direction" in c.lower() or "test" in c.lower()), None)
+                
+                # FORCE it to look at the Direction column first to avoid the "Hip AD/AB" trap
+                dir_col = next((c for c in hip_ath.columns if "direction" in c.lower()), None)
+                if not dir_col:
+                    dir_col = next((c for c in hip_ath.columns if "test" in c.lower()), None)
+                    
                 pos_col = next((c for c in hip_ath.columns if "position" in c.lower()), None)
 
-                # First split by Adduction vs Abduction
-                hip_ad = hip_ath[hip_ath[dir_col].astype(str).str.contains("AD|Adduction", case=False, na=False)] if dir_col else hip_ath
-                hip_ab = hip_ath[hip_ath[dir_col].astype(str).str.contains("AB|Abduction", case=False, na=False)] if dir_col else hip_ath
+                # Filter strictly by the full word so they don't overlap
+                hip_ad = hip_ath[hip_ath[dir_col].astype(str).str.contains("Adduction", case=False, na=False)] if dir_col else hip_ath
+                hip_ab = hip_ath[hip_ath[dir_col].astype(str).str.contains("Abduction", case=False, na=False)] if dir_col else hip_ath
 
                 # Then split by Position (Supine vs 45)
                 if pos_col:
@@ -423,6 +428,24 @@ with testing_tab_intake:
                 
                 date_str = format_date_clean(hip_ath.sort_values("Date").iloc[-1].get("Date")) if not hip_ath.empty else "N/A"
 
+                # Dynamically build the text so it hides sections if the athlete hasn't done that test
+                supine_html = ""
+                if not ad_sup.empty or not ab_sup.empty:
+                    supine_html = f"""
+                    <b>Adduction (Supine Knee):</b> Max L {ad_sup_maxL:.1f}N | R {ad_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_sup_recL, ad_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_sup_recR, ad_sup_maxR, '{:.1f}', 'N')}<br>
+                    <b>Abduction (Supine Knee):</b> Max L {ab_sup_maxL:.1f}N | R {ab_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_sup_recL, ab_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_sup_recR, ab_sup_maxR, '{:.1f}', 'N')}
+                    """
+                
+                forty_five_html = ""
+                if not ad_45.empty or not ab_45.empty:
+                    # Only add the divider line if Supine actually exists above it
+                    divider = '<div style="margin-top:6px; margin-bottom:6px; border-bottom:1px solid #D5E5E8;"></div>' if supine_html else ''
+                    forty_five_html = f"""
+                    {divider}
+                    <b>Adduction (45°):</b> Max L {ad_45_maxL:.1f}N | R {ad_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_45_recL, ad_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_45_recR, ad_45_maxR, '{:.1f}', 'N')}<br>
+                    <b>Abduction (45°):</b> Max L {ab_45_maxL:.1f}N | R {ab_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_45_recL, ab_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_45_recR, ab_45_maxR, '{:.1f}', 'N')}
+                    """
+
                 st.markdown(
                     f"""
                     <div class="hud-metric-row-light-blue">
@@ -431,19 +454,13 @@ with testing_tab_intake:
                             <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
                         </div>
                         <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Adduction (Supine Knee):</b> Max L {ad_sup_maxL:.1f}N | R {ad_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_sup_recL, ad_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_sup_recR, ad_sup_maxR, '{:.1f}', 'N')}<br>
-                            <b>Abduction (Supine Knee):</b> Max L {ab_sup_maxL:.1f}N | R {ab_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_sup_recL, ab_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_sup_recR, ab_sup_maxR, '{:.1f}', 'N')}
-                            
-                            <div style="margin-top:6px; margin-bottom:6px; border-bottom:1px solid #D5E5E8;"></div>
-                            
-                            <b>Adduction (45°):</b> Max L {ad_45_maxL:.1f}N | R {ad_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_45_recL, ad_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_45_recR, ad_45_maxR, '{:.1f}', 'N')}<br>
-                            <b>Abduction (45°):</b> Max L {ab_45_maxL:.1f}N | R {ab_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_45_recL, ab_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_45_recR, ab_45_maxR, '{:.1f}', 'N')}
+                            {supine_html}
+                            {forty_five_html}
                         </div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
-
             # 3. KNEE (Matches Node 3 - Knees)
             if not sh_ath.empty:
                 l_col = next((c for c in sh_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
