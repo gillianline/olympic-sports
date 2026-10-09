@@ -40,24 +40,29 @@ if not check_password():
 # ==========================================
 # 2. LOAD SECRET DATA
 # ==========================================
-@st.cache_data(ttl=600) # Caches data for 10 minutes so it doesn't reload every click
+@st.cache_data(ttl=600)
 def load_data():
-    # Load from the secret URLs in your secrets.toml
-    # (Using pandas to read the CSV export of a Google Sheet or private server)
     df_ff = pd.read_csv(st.secrets["sheet_forceframe"])
     df_roster = pd.read_csv(st.secrets["sheet_roster"])
+    df_cmj = pd.read_csv(st.secrets["sheet_cmj"]) # Load the new CMJ sheet
     
-    # Ensure Name column is treated as strings for matching
+    # Clean up column names: remove hidden spaces
+    df_ff.columns = df_ff.columns.str.strip()
+    df_roster.columns = df_roster.columns.str.strip()
+    df_cmj.columns = df_cmj.columns.str.strip()
+    
     df_ff['Name'] = df_ff['Name'].astype(str)
     df_roster['Name'] = df_roster['Name'].astype(str)
+    df_cmj['Name'] = df_cmj['Name'].astype(str)
     
-    # Merge Roster info (Team, Position) into ForceFrame data based on Name
+    # Merge Roster info (Sport, Position)
     df_ff = pd.merge(df_ff, df_roster, on="Name", how="left")
+    df_cmj = pd.merge(df_cmj, df_roster, on="Name", how="left")
     
-    return df_ff, df_roster
+    return df_ff, df_cmj, df_roster
 
 try:
-    df_forceframe, df_roster = load_data()
+    df_forceframe, df_cmj_full, df_roster = load_data()
 except Exception as e:
     st.error("Error loading secure data. Please check your sheet links in secrets.toml.")
     st.stop()
@@ -69,17 +74,16 @@ except Exception as e:
 st.title("⚽ Soccer Testing Dashboard")
 st.markdown("---")
 
-# Sidebar Filters
 st.sidebar.header("Filter Options")
 
-# Sport Filter (Replaces Team)
+# Sport Filter
 if 'Sport' in df_roster.columns:
     sports = df_roster['Sport'].dropna().unique().tolist()
     selected_sport = st.sidebar.selectbox("Select Sport", ["All Sports"] + sports)
 else:
     selected_sport = "All Sports"
 
-# Player Filter (dependent on Sport)
+# Player Filter
 if selected_sport != "All Sports":
     filtered_roster = df_roster[df_roster['Sport'] == selected_sport]
 else:
@@ -88,13 +92,20 @@ else:
 players = filtered_roster['Name'].dropna().unique().tolist()
 selected_player = st.sidebar.selectbox("Select Player", ["All Players"] + players)
 
-# Filter the ForceFrame Data based on selections
+# Filter BOTH ForceFrame and CMJ Data based on selections
 filtered_ff = df_forceframe.copy()
-if selected_sport != "All Sports" and 'Sport' in filtered_ff.columns:
-    filtered_ff = filtered_ff[filtered_ff['Sport'] == selected_sport]
+filtered_cmj = df_cmj_full.copy()
+
+if selected_sport != "All Sports":
+    if 'Sport' in filtered_ff.columns:
+        filtered_ff = filtered_ff[filtered_ff['Sport'] == selected_sport]
+    if 'Sport' in filtered_cmj.columns:
+        filtered_cmj = filtered_cmj[filtered_cmj['Sport'] == selected_sport]
+
 if selected_player != "All Players":
     filtered_ff = filtered_ff[filtered_ff['Name'] == selected_player]
-    
+    filtered_cmj = filtered_cmj[filtered_cmj['Name'] == selected_player]
+
 # ==========================================
 # 4. HELPER FUNCTIONS
 # ==========================================
@@ -118,6 +129,9 @@ def render_cmj_tscore_standards(player, raw_df, target_date_str, widget_key_suff
 # ==========================================
 # 5. DATA PREPARATION FOR HUD
 # ==========================================
+# ==========================================
+# 5. DATA PREPARATION FOR HUD
+# ==========================================
 df_forceframe['Date'] = pd.to_datetime(df_forceframe['Date'], errors='coerce')
 df_forceframe['Date_Str'] = df_forceframe['Date'].dt.strftime("%m/%d/%y")
 
@@ -126,24 +140,27 @@ ankle_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Ankle
 knee_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Knee', na=False, case=False)]
 shoulder_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Shoulder', na=False, case=False)]
 
-# General Hip Data (Keeps the visual HUD and Overall Profile from crashing)
+# General Hip Data
 hip_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip', na=False, case=False)]
 
-# Specific Hip Data (Used for the split raw logs)
+# Specific Hip Data
 hip_ad_ab_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip AD/AB', na=False, case=False)]
 hip_ir_er_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip IR/ER', na=False, case=False)]
 
-# Create empty DataFrames for the sheets you haven't connected yet so the code doesn't crash
+# Create empty DataFrames for sheets not yet connected
 nordic_data = pd.DataFrame()
 belt_squat_data = pd.DataFrame()
-cmj_data = pd.DataFrame()
-cmj_raw = pd.DataFrame()
+
+# ---- CMJ DATA PREP ----
+filtered_cmj['Date'] = pd.to_datetime(filtered_cmj['Date'], errors='coerce')
+filtered_cmj['Date_Str'] = filtered_cmj['Date'].dt.strftime("%m/%d/%y")
+cmj_data = filtered_cmj.copy()
+cmj_raw = filtered_cmj.copy()
 
 # Variables expected by your snippet
 season_label = "2026 Season"
 season_key = "soc26"
 roster_players = df_roster['Name'].dropna().unique().tolist()
-
 
 # ==========================================
 # 6. DASHBOARD UI (THE TESTING TAB)
@@ -635,6 +652,26 @@ with testing_tab:
 
             st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
             st.markdown(render_vball_table(p_cmj[display_cols]), unsafe_allow_html=True)
+        else:
+            st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")
+            
+        st.divider()
+
+            st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
+            
+            # Use the clean subset of columns up to Stiffness
+            display_cols = [c for c in p_cmj.columns if c not in ["Name", "Date_Str", "Jump_Height_Clean", "RSI_Clean", "Test Type", "Sport"]]
+            stiffness_col = next((c for c in display_cols if "stiffness" in c.lower()), None)
+            if stiffness_col:
+                end_idx = display_cols.index(stiffness_col) + 1
+                display_cols = display_cols[:end_idx]
+
+            df_cmj_display = p_cmj[display_cols].copy()
+            
+            # Hide empty/NaN columns exactly like we did in the ForceFrame logs
+            df_cmj_display = df_cmj_display.replace(["N/A", "NaN", "nan", ""], pd.NA).dropna(axis=1, how='all').fillna("")
+            
+            st.markdown(render_vball_table(df_cmj_display), unsafe_allow_html=True)
         else:
             st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")
 
