@@ -141,6 +141,27 @@ if selected_player != "All Players":
     filtered_nb = filtered_nb[filtered_nb['Name'].astype(str) == selected_player]
 
 # ==========================================
+# 4. HELPER FUNCTIONS
+# ==========================================
+def format_date_clean(date_val):
+    if pd.isna(date_val): return "N/A"
+    try:
+        # Assumes date is something like '9/11/26'
+        dt = pd.to_datetime(date_val)
+        return dt.strftime("%b %d, %Y")
+    except:
+        return str(date_val)
+
+def render_vball_table(df):
+    """Simple HTML table formatter to match your CSS classes"""
+    return df.to_html(classes="table table-striped", index=False, escape=False)
+
+def render_cmj_tscore_standards(player, raw_df, target_date_str, widget_key_suffix):
+    """Placeholder for your CMJ T-Score standard renderer"""
+    st.info("CMJ Standards Module goes here (Requires CMJ Data Sheet)")
+
+
+# ==========================================
 # 5. DATA PREPARATION FOR HUD
 # =========================================
 
