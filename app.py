@@ -400,11 +400,27 @@ with testing_tab_intake:
                 l_col = next((c for c in hip_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
                 r_col = next((c for c in hip_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
                 dir_col = next((c for c in hip_ath.columns if "direction" in c.lower() or "test" in c.lower()), None)
+                pos_col = next((c for c in hip_ath.columns if "position" in c.lower()), None)
+
+                # First split by Adduction vs Abduction
                 hip_ad = hip_ath[hip_ath[dir_col].astype(str).str.contains("AD|Adduction", case=False, na=False)] if dir_col else hip_ath
                 hip_ab = hip_ath[hip_ath[dir_col].astype(str).str.contains("AB|Abduction", case=False, na=False)] if dir_col else hip_ath
 
-                (ad_maxL, ad_maxR), (ad_recL, ad_recR), (_, _) = get_peak_and_recent_row(hip_ad, l_col, r_col)
-                (ab_maxL, ab_maxR), (ab_recL, ab_recR), (_, _) = get_peak_and_recent_row(hip_ab, l_col, r_col)
+                # Then split by Position (Supine vs 45)
+                if pos_col:
+                    ad_sup = hip_ad[hip_ad[pos_col].astype(str).str.contains("Supine", case=False, na=False)]
+                    ab_sup = hip_ab[hip_ab[pos_col].astype(str).str.contains("Supine", case=False, na=False)]
+                    ad_45 = hip_ad[hip_ad[pos_col].astype(str).str.contains("45", case=False, na=False)]
+                    ab_45 = hip_ab[hip_ab[pos_col].astype(str).str.contains("45", case=False, na=False)]
+                else:
+                    ad_sup, ab_sup, ad_45, ab_45 = hip_ad, hip_ab, pd.DataFrame(), pd.DataFrame()
+
+                # Get Max and Recent values for all 4 variations
+                (ad_sup_maxL, ad_sup_maxR), (ad_sup_recL, ad_sup_recR), _ = get_peak_and_recent_row(ad_sup, l_col, r_col)
+                (ab_sup_maxL, ab_sup_maxR), (ab_sup_recL, ab_sup_recR), _ = get_peak_and_recent_row(ab_sup, l_col, r_col)
+                (ad_45_maxL, ad_45_maxR), (ad_45_recL, ad_45_recR), _ = get_peak_and_recent_row(ad_45, l_col, r_col)
+                (ab_45_maxL, ab_45_maxR), (ab_45_recL, ab_45_recR), _ = get_peak_and_recent_row(ab_45, l_col, r_col)
+                
                 date_str = format_date_clean(hip_ath.sort_values("Date").iloc[-1].get("Date")) if not hip_ath.empty else "N/A"
 
                 st.markdown(
@@ -415,8 +431,13 @@ with testing_tab_intake:
                             <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
                         </div>
                         <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Hip Adduction:</b> Max L {ad_maxL:.1f}N | R {ad_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_recL, ad_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_recR, ad_maxR, '{:.1f}', 'N')}<br>
-                            <b>Hip Abduction:</b> Max L {ab_maxL:.1f}N | R {ab_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_recL, ab_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_recR, ab_maxR, '{:.1f}', 'N')}
+                            <b>Adduction (Supine Knee):</b> Max L {ad_sup_maxL:.1f}N | R {ad_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_sup_recL, ad_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_sup_recR, ad_sup_maxR, '{:.1f}', 'N')}<br>
+                            <b>Abduction (Supine Knee):</b> Max L {ab_sup_maxL:.1f}N | R {ab_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_sup_recL, ab_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_sup_recR, ab_sup_maxR, '{:.1f}', 'N')}
+                            
+                            <div style="margin-top:6px; margin-bottom:6px; border-bottom:1px solid #D5E5E8;"></div>
+                            
+                            <b>Adduction (45°):</b> Max L {ad_45_maxL:.1f}N | R {ad_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_45_recL, ad_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_45_recR, ad_45_maxR, '{:.1f}', 'N')}<br>
+                            <b>Abduction (45°):</b> Max L {ab_45_maxL:.1f}N | R {ab_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_45_recL, ab_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_45_recR, ab_45_maxR, '{:.1f}', 'N')}
                         </div>
                     </div>
                     """,
