@@ -48,17 +48,24 @@ def load_data():
     df_bs = pd.read_csv(st.secrets["sheet_belt_squat"])
     df_nb = pd.read_csv(st.secrets["sheet_nordbord"]) 
     
-    # Clean up column names: remove hidden spaces
+    # Clean up column names: remove hidden spaces and fix capitalization
     for df in [df_ff, df_roster, df_cmj, df_bs, df_nb]:
         df.columns = df.columns.str.strip()
+        
+        # Bulletproof: Force any variation of "season" or "sport" to be capitalized correctly
+        rename_map = {}
+        for col in df.columns:
+            if col.lower() == 'season': rename_map[col] = 'Season'
+            if col.lower() == 'sport': rename_map[col] = 'Sport'
+        df.rename(columns=rename_map, inplace=True)
+        
         if 'Name' in df.columns:
             df['Name'] = df['Name'].astype(str)
             
     if "Date UTC" in df_nb.columns:
         df_nb = df_nb.rename(columns={"Date UTC": "Date"})
     
-    # Smart Merge: Drop overlapping columns (like Season/Sport) from roster before merging 
-    # so we don't get messy 'Season_x' and 'Season_y' columns
+    # Smart Merge: Drop overlapping columns from roster before merging 
     def smart_merge(main_df, roster_df):
         cols_to_drop = [c for c in roster_df.columns if c in main_df.columns and c != "Name"]
         clean_roster = roster_df.drop(columns=cols_to_drop)
@@ -86,17 +93,25 @@ st.markdown("---")
 
 st.sidebar.header("Filter Options")
 
-# 1. Season Filter
-if 'Season' in df_roster.columns:
-    seasons = df_roster['Season'].dropna().astype(str).unique().tolist()
-    seasons.sort(reverse=True) # Puts newest season at the top
+# 1. Season Filter (Bulletproof Version)
+# Scans ALL sheets to build the list, not just the roster
+all_seasons = set()
+for df in [df_roster, df_forceframe, df_cmj_full, df_bs_full, df_nb_full]:
+    if 'Season' in df.columns:
+        all_seasons.update(df['Season'].dropna().astype(str).unique().tolist())
+
+if all_seasons:
+    seasons = list(all_seasons)
+    seasons.sort(reverse=True) # Newest at top
     selected_season = st.sidebar.selectbox("Select Season", ["All Seasons"] + seasons)
 else:
     selected_season = "All Seasons"
+    st.sidebar.warning("⚠️ 'Season' column not found in any sheet. Check your Excel headers!")
 
 filtered_roster = df_roster.copy()
 if selected_season != "All Seasons" and 'Season' in filtered_roster.columns:
     filtered_roster = filtered_roster[filtered_roster['Season'].astype(str) == selected_season]
+
 
 # 2. Sport Filter
 if 'Sport' in filtered_roster.columns:
@@ -107,6 +122,7 @@ else:
 
 if selected_sport != "All Sports":
     filtered_roster = filtered_roster[filtered_roster['Sport'].astype(str) == selected_sport]
+
 
 # 3. Player Filter
 players = filtered_roster['Name'].dropna().astype(str).unique().tolist()
@@ -119,21 +135,21 @@ filtered_cmj = df_cmj_full.copy()
 filtered_bs = df_bs_full.copy()
 filtered_nb = df_nb_full.copy()
 
-# Apply Season Filter
+# Apply Season Filter Downstream
 if selected_season != "All Seasons":
     if 'Season' in filtered_ff.columns: filtered_ff = filtered_ff[filtered_ff['Season'].astype(str) == selected_season]
     if 'Season' in filtered_cmj.columns: filtered_cmj = filtered_cmj[filtered_cmj['Season'].astype(str) == selected_season]
     if 'Season' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Season'].astype(str) == selected_season]
     if 'Season' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Season'].astype(str) == selected_season]
 
-# Apply Sport Filter
+# Apply Sport Filter Downstream
 if selected_sport != "All Sports":
     if 'Sport' in filtered_ff.columns: filtered_ff = filtered_ff[filtered_ff['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_cmj.columns: filtered_cmj = filtered_cmj[filtered_cmj['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Sport'].astype(str) == selected_sport]
 
-# Apply Player Filter
+# Apply Player Filter Downstream
 if selected_player != "All Players":
     filtered_ff = filtered_ff[filtered_ff['Name'].astype(str) == selected_player]
     filtered_cmj = filtered_cmj[filtered_cmj['Name'].astype(str) == selected_player]
