@@ -124,14 +124,26 @@ df_forceframe['Date_Str'] = df_forceframe['Date'].dt.strftime("%m/%d/%y")
 # Split by the specific tests in your soccer sheet
 ankle_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Ankle', na=False, case=False)]
 knee_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Knee', na=False, case=False)]
+shoulder_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Shoulder', na=False, case=False)]
+
+# General Hip Data (Keeps the visual HUD and Overall Profile from crashing)
+hip_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip', na=False, case=False)]
+
+# Specific Hip Data (Used for the split raw logs)
 hip_ad_ab_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip AD/AB', na=False, case=False)]
 hip_ir_er_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip IR/ER', na=False, case=False)]
-shoulder_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Shoulder', na=False, case=False)]
+
+# Create empty DataFrames for the sheets you haven't connected yet so the code doesn't crash
+nordic_data = pd.DataFrame()
+belt_squat_data = pd.DataFrame()
+cmj_data = pd.DataFrame()
+cmj_raw = pd.DataFrame()
 
 # Variables expected by your snippet
 season_label = "2026 Season"
 season_key = "soc26"
 roster_players = df_roster['Name'].dropna().unique().tolist()
+
 
 # ==========================================
 # 6. DASHBOARD UI (THE TESTING TAB)
