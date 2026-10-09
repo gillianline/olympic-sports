@@ -46,30 +46,28 @@ def load_data():
     df_roster = pd.read_csv(st.secrets["sheet_roster"])
     df_cmj = pd.read_csv(st.secrets["sheet_cmj"])
     df_bs = pd.read_csv(st.secrets["sheet_belt_squat"])
-    df_nb = pd.read_csv(st.secrets["sheet_nordbord"]) # Load NordBord
+    df_nb = pd.read_csv(st.secrets["sheet_nordbord"]) 
     
     # Clean up column names: remove hidden spaces
-    df_ff.columns = df_ff.columns.str.strip()
-    df_roster.columns = df_roster.columns.str.strip()
-    df_cmj.columns = df_cmj.columns.str.strip()
-    df_bs.columns = df_bs.columns.str.strip()
-    df_nb.columns = df_nb.columns.str.strip()
-    
-    # Standardize the Date column name for NordBord if it's called "Date UTC"
+    for df in [df_ff, df_roster, df_cmj, df_bs, df_nb]:
+        df.columns = df.columns.str.strip()
+        if 'Name' in df.columns:
+            df['Name'] = df['Name'].astype(str)
+            
     if "Date UTC" in df_nb.columns:
         df_nb = df_nb.rename(columns={"Date UTC": "Date"})
     
-    df_ff['Name'] = df_ff['Name'].astype(str)
-    df_roster['Name'] = df_roster['Name'].astype(str)
-    df_cmj['Name'] = df_cmj['Name'].astype(str)
-    df_bs['Name'] = df_bs['Name'].astype(str)
-    df_nb['Name'] = df_nb['Name'].astype(str)
-    
-    # Merge Roster info (Sport, Position)
-    df_ff = pd.merge(df_ff, df_roster, on="Name", how="left")
-    df_cmj = pd.merge(df_cmj, df_roster, on="Name", how="left")
-    df_bs = pd.merge(df_bs, df_roster, on="Name", how="left")
-    df_nb = pd.merge(df_nb, df_roster, on="Name", how="left")
+    # Smart Merge: Drop overlapping columns (like Season/Sport) from roster before merging 
+    # so we don't get messy 'Season_x' and 'Season_y' columns
+    def smart_merge(main_df, roster_df):
+        cols_to_drop = [c for c in roster_df.columns if c in main_df.columns and c != "Name"]
+        clean_roster = roster_df.drop(columns=cols_to_drop)
+        return pd.merge(main_df, clean_roster, on="Name", how="left")
+
+    df_ff = smart_merge(df_ff, df_roster)
+    df_cmj = smart_merge(df_cmj, df_roster)
+    df_bs = smart_merge(df_bs, df_roster)
+    df_nb = smart_merge(df_nb, df_roster)
     
     return df_ff, df_cmj, df_bs, df_nb, df_roster
 
@@ -79,6 +77,7 @@ except Exception as e:
     st.error("Error loading secure data. Please check your sheet links in secrets.toml.")
     st.stop()
 
+
 # ==========================================
 # 3. DASHBOARD UI & SIDEBAR
 # ==========================================
@@ -87,7 +86,7 @@ st.markdown("---")
 
 st.sidebar.header("Filter Options")
 
-# 1. Season Filter (New!)
+# 1. Season Filter
 if 'Season' in df_roster.columns:
     seasons = df_roster['Season'].dropna().astype(str).unique().tolist()
     seasons.sort(reverse=True) # Puts newest season at the top
@@ -95,7 +94,6 @@ if 'Season' in df_roster.columns:
 else:
     selected_season = "All Seasons"
 
-# Pre-filter roster so the next dropdowns are accurate to the season
 filtered_roster = df_roster.copy()
 if selected_season != "All Seasons" and 'Season' in filtered_roster.columns:
     filtered_roster = filtered_roster[filtered_roster['Season'].astype(str) == selected_season]
@@ -141,27 +139,6 @@ if selected_player != "All Players":
     filtered_cmj = filtered_cmj[filtered_cmj['Name'].astype(str) == selected_player]
     filtered_bs = filtered_bs[filtered_bs['Name'].astype(str) == selected_player]
     filtered_nb = filtered_nb[filtered_nb['Name'].astype(str) == selected_player]
-    
-    
-# ==========================================
-# 4. HELPER FUNCTIONS
-# ==========================================
-def format_date_clean(date_val):
-    if pd.isna(date_val): return "N/A"
-    try:
-        # Assumes date is something like '9/11/26'
-        dt = pd.to_datetime(date_val)
-        return dt.strftime("%b %d, %Y")
-    except:
-        return str(date_val)
-
-def render_vball_table(df):
-    """Simple HTML table formatter to match your CSS classes"""
-    return df.to_html(classes="table table-striped", index=False, escape=False)
-
-def render_cmj_tscore_standards(player, raw_df, target_date_str, widget_key_suffix):
-    """Placeholder for your CMJ T-Score standard renderer"""
-    st.info("CMJ Standards Module goes here (Requires CMJ Data Sheet)")
 
 # ==========================================
 # 5. DATA PREPARATION FOR HUD
@@ -203,12 +180,9 @@ if not filtered_nb.empty and 'Date' in filtered_nb.columns:
     filtered_nb['Date_Str'] = filtered_nb['Date'].dt.strftime("%m/%d/%y")
 nordic_data = filtered_nb.copy()
 
-# Variables expected by your snippet
-# Variables expected by your snippet (Now Dynamic!)
+# Variables expected by your snippet (Now entirely dynamic!)
 season_label = selected_season if selected_season != "All Seasons" else "All Seasons"
 season_key = season_label.replace(" ", "_").lower()
-
-# Ensure the athlete selectboxes in the tabs only show players valid for this season/sport
 roster_players = filtered_roster['Name'].dropna().unique().tolist()
 
 # ==========================================
