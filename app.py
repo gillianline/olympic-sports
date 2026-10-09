@@ -442,13 +442,13 @@ with testing_tab:
                 has_dir = pd.notna(dir_) and str(dir_).strip() != ""
                 
                 if has_pos and has_dir:
-                    return f"{pos} - {dir_}"  # e.g., "Hip IR/ER - Supine - Internal"
+                    return f"{pos} - {dir_}"
                 elif has_pos:
-                    return pos                # e.g., "Hip IR/ER - Supine"
+                    return pos
                 elif has_dir:
-                    return f"{test} - {dir_}" # e.g., "Knee Extension - Left" (if applicable)
+                    return f"{test} - {dir_}"
                 else:
-                    return test               # e.g., "Ankle Plantar Flexion"
+                    return test
 
             df_display['Position'] = df_display.apply(get_movement, axis=1)
 
@@ -458,10 +458,18 @@ with testing_tab:
                 "Max Imbalance", "L Max Ratio", "R Max Ratio"
             ]
             
-            # Only select the columns that actually exist to prevent crash errors
+            # Only select the columns that actually exist
             final_cols = [c for c in target_cols if c in df_display.columns]
+            df_final = df_display[final_cols].copy()
             
-            st.markdown(render_vball_table(df_display[final_cols]), unsafe_allow_html=True)
+            # Convert string "NaN" or "N/A" to actual nulls, then drop completely empty columns
+            df_final = df_final.replace(["N/A", "NaN", "nan", ""], pd.NA)
+            df_final = df_final.dropna(axis=1, how='all')
+            
+            # Fill any remaining scattered missing values with a blank space for a clean UI
+            df_final = df_final.fillna("")
+            
+            st.markdown(render_vball_table(df_final), unsafe_allow_html=True)
 
         # Expanders customized for your Soccer tests
         with st.expander("Ankle Plantar Flexion Log", expanded=False):
