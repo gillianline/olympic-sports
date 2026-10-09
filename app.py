@@ -553,6 +553,7 @@ with testing_tab:
             else pd.DataFrame()
         )
 
+        # Find the Jump Height and RSI columns dynamically
         jump_cols = [c for c in p_cmj.columns if "jump" in c.lower() or "height" in c.lower()]
         j_col = jump_cols[0] if jump_cols else None
         rsi_cols = [c for c in p_cmj.columns if "rsi" in c.lower()]
@@ -642,24 +643,9 @@ with testing_tab:
 
             st.divider()
 
-            display_cols = [
-                c for c in p_cmj.columns if c not in ["Name", "Date_Str", "Jump_Height_Clean", "RSI_Clean"]
-            ]
-            stiffness_col = next((c for c in display_cols if "stiffness" in c.lower()), None)
-            if stiffness_col:
-                end_idx = display_cols.index(stiffness_col) + 1
-                display_cols = display_cols[:end_idx]
-
-            st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
-            st.markdown(render_vball_table(p_cmj[display_cols]), unsafe_allow_html=True)
-        else:
-            st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")
-            
-            st.divider()
-
             st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
             
-            # Use the clean subset of columns up to Stiffness
+            # Use the clean subset of columns up to Stiffness (if it exists)
             display_cols = [c for c in p_cmj.columns if c not in ["Name", "Date_Str", "Jump_Height_Clean", "RSI_Clean", "Test Type", "Sport"]]
             stiffness_col = next((c for c in display_cols if "stiffness" in c.lower()), None)
             if stiffness_col:
