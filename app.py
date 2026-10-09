@@ -190,7 +190,7 @@ roster_players = df_roster['Name'].dropna().unique().tolist()
 # ==========================================
 
 # We will put your code inside the first tab to keep the structure clean
-testing_tab, roster_tab, empty_tab1, empty_tab2 = st.tabs([
+testing_tab, roster_tab = st.tabs([
     "Testing HUD", "Roster"
 ])
 
