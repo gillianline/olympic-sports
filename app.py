@@ -499,12 +499,6 @@ with testing_tab:
 
         st.divider()
 
-        st.divider()
-
-        st.divider()
-
-        st.divider()
-
         st.markdown(f"### Intake Assessment Raw Logs for {selected_intake_athlete} ({season_label})")
 
         def render_clean_log(df_sub, log_name):
