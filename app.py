@@ -72,13 +72,16 @@ st.markdown("---")
 # Sidebar Filters
 st.sidebar.header("Filter Options")
 
-# Team Filter
-teams = df_roster['Sport'].dropna().unique().tolist()
-selected_team = st.sidebar.selectbox("Select Team", ["All Teams"] + teams)
+# Sport Filter (Replaces Team)
+if 'Sport' in df_roster.columns:
+    sports = df_roster['Sport'].dropna().unique().tolist()
+    selected_sport = st.sidebar.selectbox("Select Sport", ["All Sports"] + sports)
+else:
+    selected_sport = "All Sports"
 
-# Player Filter (dependent on Team)
-if selected_team != "All Teams":
-    filtered_roster = df_roster[df_roster['Sport'] == selected_team]
+# Player Filter (dependent on Sport)
+if selected_sport != "All Sports":
+    filtered_roster = df_roster[df_roster['Sport'] == selected_sport]
 else:
     filtered_roster = df_roster
 
@@ -87,11 +90,11 @@ selected_player = st.sidebar.selectbox("Select Player", ["All Players"] + player
 
 # Filter the ForceFrame Data based on selections
 filtered_ff = df_forceframe.copy()
-if selected_team != "All Teams":
-    filtered_ff = filtered_ff[filtered_ff['Sport'] == selected_team]
+if selected_sport != "All Sports" and 'Sport' in filtered_ff.columns:
+    filtered_ff = filtered_ff[filtered_ff['Sport'] == selected_sport]
 if selected_player != "All Players":
     filtered_ff = filtered_ff[filtered_ff['Name'] == selected_player]
-
+    
 # ==========================================
 # 4. HELPER FUNCTIONS
 # ==========================================
@@ -115,26 +118,20 @@ def render_cmj_tscore_standards(player, raw_df, target_date_str, widget_key_suff
 # ==========================================
 # 5. DATA PREPARATION FOR HUD
 # ==========================================
-# Force your Date column to datetime so the .sort_values("Date") in your snippet works
 df_forceframe['Date'] = pd.to_datetime(df_forceframe['Date'], errors='coerce')
 df_forceframe['Date_Str'] = df_forceframe['Date'].dt.strftime("%m/%d/%y")
 
-# Split the single ForceFrame sheet into the body parts your HUD expects
-ankle_data = df_forceframe[df_forceframe['Test'].str.contains('Ankle', na=False, case=False)]
-hip_data = df_forceframe[df_forceframe['Test'].str.contains('Hip', na=False, case=False)]
-knee_data = df_forceframe[df_forceframe['Test'].str.contains('Knee', na=False, case=False)]
-
-# Create empty DataFrames for the sheets you haven't connected yet so the code doesn't crash
-nordic_data = pd.DataFrame()
-belt_squat_data = pd.DataFrame()
-cmj_data = pd.DataFrame()
-cmj_raw = pd.DataFrame()
+# Split by the specific tests in your soccer sheet
+ankle_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Ankle', na=False, case=False)]
+knee_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Knee', na=False, case=False)]
+hip_ad_ab_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip AD/AB', na=False, case=False)]
+hip_ir_er_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip IR/ER', na=False, case=False)]
+shoulder_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Shoulder', na=False, case=False)]
 
 # Variables expected by your snippet
 season_label = "2026 Season"
 season_key = "soc26"
 roster_players = df_roster['Name'].dropna().unique().tolist()
-
 
 # ==========================================
 # 6. DASHBOARD UI (THE TESTING TAB)
@@ -412,73 +409,68 @@ with testing_tab:
 
         st.divider()
 
+        st.divider()
+
         st.markdown(f"### Intake Assessment Raw Logs for {selected_intake_athlete} ({season_label})")
 
-        # The core metrics you want to display
-        metric_cols = ["L Max Force (N)", "R Max Force (N)", "Max Imbalance", "L Max Ratio", "R Max Ratio"]
-
-        def get_log_cols(df_sub):
-            """Dynamically selects Test vs Position based on the movement type"""
-            cols = ["Date"]
+        def render_clean_log(df_sub, log_name):
+            if df_sub.empty:
+                st.info(f"No {log_name} records for {selected_intake_athlete} in {season_label}.")
+                return
             
-            # Check if this specific table involves Abduction or Adduction
-            is_ab_ad = False
-            check_cols = [c for c in ["Test", "Direction", "Position"] if c in df_sub.columns]
-            for col in check_cols:
-                if df_sub[col].astype(str).str.contains("Abduction|Adduction|AD|AB", case=False).any():
-                    is_ab_ad = True
-                    break
+            df_display = df_sub.copy()
             
-            # Swap 'Test' for 'Position' if it's an Abduction/Adduction movement
-            if is_ab_ad and "Position" in df_sub.columns:
-                cols.append("Position")
-                # Include Direction so we can tell the difference between the squeeze and the push
-                if "Direction" in df_sub.columns:
-                    cols.append("Direction")
-            elif "Test" in df_sub.columns:
-                cols.append("Test")
+            # Smart rule to merge Test, Position, and Direction into one clean column
+            def get_movement(row):
+                pos = row.get('Position')
+                dir_ = row.get('Direction')
+                test = row.get('Test')
                 
-            # Add the rest of the metrics if they exist in the sheet
-            cols.extend([m for m in metric_cols if m in df_sub.columns])
-            return cols
+                has_pos = pd.notna(pos) and str(pos).strip() != ""
+                has_dir = pd.notna(dir_) and str(dir_).strip() != ""
+                
+                if has_pos and has_dir:
+                    return f"{pos} - {dir_}"  # e.g., "Hip IR/ER - Supine - Internal"
+                elif has_pos:
+                    return pos                # e.g., "Hip IR/ER - Supine"
+                elif has_dir:
+                    return f"{test} - {dir_}" # e.g., "Knee Extension - Left" (if applicable)
+                else:
+                    return test               # e.g., "Ankle Plantar Flexion"
 
-        with st.expander("NordBord Test Log", expanded=False):
-            if not nord_ath.empty:
-                disp_nord = get_log_cols(nord_ath)
-                # Fallback if NordBord doesn't match standard ForceFrame columns
-                if not disp_nord: disp_nord = [c for c in nord_ath.columns if c not in ["Name", "Date_Str"]]
-                st.markdown(render_vball_table(nord_ath[disp_nord]), unsafe_allow_html=True)
-            else:
-                st.info(f"No NordBord records for {selected_intake_athlete} in {season_label}.")
+            df_display['Position'] = df_display.apply(get_movement, axis=1)
 
-        with st.expander("Harness Belt Squat Log", expanded=False):
-            if not bs_ath.empty:
-                disp_bs = get_log_cols(bs_ath)
-                if not disp_bs: disp_bs = [c for c in bs_ath.columns if c not in ["Name", "Date_Str", "PVF_Calc"]]
-                st.markdown(render_vball_table(bs_ath[disp_bs]), unsafe_allow_html=True)
-            else:
-                st.info(f"No Harness Belt Squat records for {selected_intake_athlete} in {season_label}.")
+            # The exact target columns you requested
+            target_cols = [
+                "Date", "Position", "L Max Force (N)", "R Max Force (N)", 
+                "Max Imbalance", "L Max Ratio", "R Max Ratio"
+            ]
+            
+            # Only select the columns that actually exist to prevent crash errors
+            final_cols = [c for c in target_cols if c in df_display.columns]
+            
+            st.markdown(render_vball_table(df_display[final_cols]), unsafe_allow_html=True)
+
+        # Expanders customized for your Soccer tests
+        with st.expander("Ankle Plantar Flexion Log", expanded=False):
+            calf_ath = ankle_data[ankle_data["Name"] == selected_intake_athlete].sort_values("Date") if not ankle_data.empty else pd.DataFrame()
+            render_clean_log(calf_ath, "Ankle Assessment")
 
         with st.expander("Knee Extension / Flexion Log", expanded=False):
-            if not sh_ath.empty:
-                disp_knee = get_log_cols(sh_ath)
-                st.markdown(render_vball_table(sh_ath[disp_knee]), unsafe_allow_html=True)
-            else:
-                st.info(f"No Knee Assessment records for {selected_intake_athlete} in {season_label}.")
+            sh_ath = knee_data[knee_data["Name"] == selected_intake_athlete].sort_values("Date") if not knee_data.empty else pd.DataFrame()
+            render_clean_log(sh_ath, "Knee Assessment")
 
-        with st.expander("Hip Adduction / Abduction Log", expanded=False):
-            if not hip_ath.empty:
-                disp_hip = get_log_cols(hip_ath)
-                st.markdown(render_vball_table(hip_ath[disp_hip]), unsafe_allow_html=True)
-            else:
-                st.info(f"No Hip Assessment records for {selected_intake_athlete} in {season_label}.")
+        with st.expander("Hip AD/AB Log", expanded=False):
+            hip_ad_ath = hip_ad_ab_data[hip_ad_ab_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_ad_ab_data.empty else pd.DataFrame()
+            render_clean_log(hip_ad_ath, "Hip AD/AB")
 
-        with st.expander("Ankle Plantar Flexion Log", expanded=False):
-            if not calf_ath.empty:
-                disp_ankle = get_log_cols(calf_ath)
-                st.markdown(render_vball_table(calf_ath[disp_ankle]), unsafe_allow_html=True)
-            else:
-                st.info(f"No Ankle Assessment records for {selected_intake_athlete} in {season_label}.")
+        with st.expander("Hip IR/ER Log", expanded=False):
+            hip_ir_ath = hip_ir_er_data[hip_ir_er_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_ir_er_data.empty else pd.DataFrame()
+            render_clean_log(hip_ir_ath, "Hip IR/ER")
+            
+        with st.expander("Shoulder Log", expanded=False):
+            shoulder_ath = shoulder_data[shoulder_data["Name"] == selected_intake_athlete].sort_values("Date") if not shoulder_data.empty else pd.DataFrame()
+            render_clean_log(shoulder_ath, "Shoulder")
 
     # SECTION 5B: CMJ TAB
     with testing_tab_cmj:
