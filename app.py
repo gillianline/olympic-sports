@@ -645,6 +645,8 @@ with testing_tab:
 
             st.divider()
 
+            st.divider()
+
             st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
             
             # Find the actual columns in the dataframe that contain Jump Height and RSI
@@ -658,9 +660,8 @@ with testing_tab:
             if rsi_col: target_cols.append(rsi_col)
             target_cols.extend(["Concentric Peak Velocity [m/s]", "CMJ Stiffness [N/m]"])
             
-            # Filter to only the columns that actually exist to prevent crash errors
+            # Filter to only the columns that actually exist
             final_cols = [c for c in target_cols if c in p_cmj.columns]
-            
             df_cmj_display = p_cmj[final_cols].copy()
             
             # Rename the long VALD names to your clean requested names
@@ -669,12 +670,29 @@ with testing_tab:
             if rsi_col: rename_map[rsi_col] = "RSI [m/s]"
             df_cmj_display = df_cmj_display.rename(columns=rename_map)
             
-            # Hide empty/NaN columns exactly like we did in the ForceFrame logs
-            df_cmj_display = df_cmj_display.replace(["N/A", "NaN", "nan", ""], pd.NA).dropna(axis=1, how='all').fillna("")
+            # --- THE FIX FOR THE "TERRIBLE" LOOK ---
             
-            st.markdown(render_vball_table(df_cmj_display), unsafe_allow_html=True)
+            # 1. Clean up the Date format
+            if "Date" in df_cmj_display.columns:
+                df_cmj_display["Date"] = pd.to_datetime(df_cmj_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+
+            # 2. Round the crazy VALD decimals to 2 places and remove NaNs
+            for col in df_cmj_display.columns:
+                if col not in ["Test Type", "Date"]:
+                    # Convert to numeric, round to 2 decimals, and format cleanly
+                    df_cmj_display[col] = pd.to_numeric(df_cmj_display[col], errors="coerce").apply(
+                        lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
+                    )
+            
+            # 3. Drop completely empty columns and fill scattered empty cells with a clean dash
+            df_cmj_display = df_cmj_display.dropna(axis=1, how='all').fillna("-")
+            
+            # 4. Use Streamlit's native dataframe for a beautiful, responsive, and sortable UI
+            st.dataframe(df_cmj_display, use_container_width=True, hide_index=True)
+            
         else:
             st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")
+            
             
     # SECTION 5C: OVERALL PROFILE
     with testing_tab_overall:
