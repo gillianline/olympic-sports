@@ -70,12 +70,12 @@ st.markdown("---")
 st.sidebar.header("Filter Options")
 
 # Team Filter
-teams = df_roster['Team'].dropna().unique().tolist()
+teams = df_roster['Sport'].dropna().unique().tolist()
 selected_team = st.sidebar.selectbox("Select Team", ["All Teams"] + teams)
 
 # Player Filter (dependent on Team)
 if selected_team != "All Teams":
-    filtered_roster = df_roster[df_roster['Team'] == selected_team]
+    filtered_roster = df_roster[df_roster['Sport'] == selected_team]
 else:
     filtered_roster = df_roster
 
@@ -85,7 +85,7 @@ selected_player = st.sidebar.selectbox("Select Player", ["All Players"] + player
 # Filter the ForceFrame Data based on selections
 filtered_ff = df_forceframe.copy()
 if selected_team != "All Teams":
-    filtered_ff = filtered_ff[filtered_ff['Team'] == selected_team]
+    filtered_ff = filtered_ff[filtered_ff['Sport'] == selected_team]
 if selected_player != "All Players":
     filtered_ff = filtered_ff[filtered_ff['Name'] == selected_player]
 
