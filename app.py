@@ -408,25 +408,36 @@ with testing_tab:
 
         st.divider()
 
+        st.divider()
+
         st.markdown(f"### Intake Assessment Raw Logs for {selected_intake_athlete} ({season_label})")
+
+        # The exact columns you want to display
+        log_cols = [
+            "Date", "Test", "L Max Force (N)", "R Max Force (N)", 
+            "Max Imbalance", "L Max Ratio", "R Max Ratio"
+        ]
 
         with st.expander("NordBord Test Log", expanded=False):
             if not nord_ath.empty:
-                disp_nord = [c for c in nord_ath.columns if c not in ["Name", "Date_Str"]]
+                disp_nord = [c for c in log_cols if c in nord_ath.columns]
+                # Fallback if NordBord sheet has different column names
+                if not disp_nord: disp_nord = [c for c in nord_ath.columns if c not in ["Name", "Date_Str"]]
                 st.markdown(render_vball_table(nord_ath[disp_nord]), unsafe_allow_html=True)
             else:
                 st.info(f"No NordBord records for {selected_intake_athlete} in {season_label}.")
 
         with st.expander("Harness Belt Squat Log", expanded=False):
             if not bs_ath.empty:
-                disp_bs = [c for c in bs_ath.columns if c not in ["Name", "Date_Str", "PVF_Calc"]]
+                disp_bs = [c for c in log_cols if c in bs_ath.columns]
+                if not disp_bs: disp_bs = [c for c in bs_ath.columns if c not in ["Name", "Date_Str", "PVF_Calc"]]
                 st.markdown(render_vball_table(bs_ath[disp_bs]), unsafe_allow_html=True)
             else:
                 st.info(f"No Harness Belt Squat records for {selected_intake_athlete} in {season_label}.")
 
         with st.expander("Knee Extension / Flexion Log", expanded=False):
             if not sh_ath.empty:
-                disp_knee = [c for c in sh_ath.columns if c not in ["Name", "Date_Str"]]
+                disp_knee = [c for c in log_cols if c in sh_ath.columns]
                 st.markdown(render_vball_table(sh_ath[disp_knee]), unsafe_allow_html=True)
             else:
                 st.info(f"No Knee Assessment records for {selected_intake_athlete} in {season_label}.")
@@ -434,37 +445,21 @@ with testing_tab:
         with st.expander("Hip Adduction / Abduction Log", expanded=False):
             if not hip_ath.empty:
                 hip_display_df = hip_ath.copy()
-                dir_col = next((c for c in hip_display_df.columns if "direction" in c.lower() or "test" in c.lower()), None)
-                test_col = next((c for c in hip_display_df.columns if c.lower() == "test"), None)
-
-                if dir_col:
+                # Make sure the "Test" column accurately reflects the movement
+                dir_col = next((c for c in hip_display_df.columns if "direction" in c.lower()), None)
+                if dir_col and "Test" not in hip_display_df.columns:
                     hip_display_df["Test"] = hip_display_df[dir_col].apply(
                         lambda x: "Hip Adduction" if "AD" in str(x) or "Adduction" in str(x) else ("Hip Abduction" if "AB" in str(x) or "Abduction" in str(x) else str(x))
                     )
                 
-                omit_cols = ["Name", "Date_Str"]
-                if dir_col and dir_col != "Test":
-                    omit_cols.append(dir_col)
-                if test_col and test_col != "Test":
-                    omit_cols.append(test_col)
-
-                all_cols = [c for c in hip_display_df.columns if c not in omit_cols]
-                final_cols = []
-                if "Date" in all_cols:
-                    final_cols.append("Date")
-                    all_cols.remove("Date")
-                if "Test" in all_cols:
-                    final_cols.append("Test")
-                    all_cols.remove("Test")
-                final_cols.extend(all_cols)
-
-                st.markdown(render_vball_table(hip_display_df[final_cols]), unsafe_allow_html=True)
+                disp_hip = [c for c in log_cols if c in hip_display_df.columns]
+                st.markdown(render_vball_table(hip_display_df[disp_hip]), unsafe_allow_html=True)
             else:
                 st.info(f"No Hip Assessment records for {selected_intake_athlete} in {season_label}.")
 
         with st.expander("Ankle Plantar Flexion Log", expanded=False):
             if not calf_ath.empty:
-                disp_ankle = [c for c in calf_ath.columns if c not in ["Name", "Date_Str"]]
+                disp_ankle = [c for c in log_cols if c in calf_ath.columns]
                 st.markdown(render_vball_table(calf_ath[disp_ankle]), unsafe_allow_html=True)
             else:
                 st.info(f"No Ankle Assessment records for {selected_intake_athlete} in {season_label}.")
