@@ -44,25 +44,29 @@ if not check_password():
 def load_data():
     df_ff = pd.read_csv(st.secrets["sheet_forceframe"])
     df_roster = pd.read_csv(st.secrets["sheet_roster"])
-    df_cmj = pd.read_csv(st.secrets["sheet_cmj"]) # Load the new CMJ sheet
+    df_cmj = pd.read_csv(st.secrets["sheet_cmj"])
+    df_bs = pd.read_csv(st.secrets["sheet_belt_squat"]) # Load Belt Squat
     
     # Clean up column names: remove hidden spaces
     df_ff.columns = df_ff.columns.str.strip()
     df_roster.columns = df_roster.columns.str.strip()
     df_cmj.columns = df_cmj.columns.str.strip()
+    df_bs.columns = df_bs.columns.str.strip()
     
     df_ff['Name'] = df_ff['Name'].astype(str)
     df_roster['Name'] = df_roster['Name'].astype(str)
     df_cmj['Name'] = df_cmj['Name'].astype(str)
+    df_bs['Name'] = df_bs['Name'].astype(str)
     
     # Merge Roster info (Sport, Position)
     df_ff = pd.merge(df_ff, df_roster, on="Name", how="left")
     df_cmj = pd.merge(df_cmj, df_roster, on="Name", how="left")
+    df_bs = pd.merge(df_bs, df_roster, on="Name", how="left")
     
-    return df_ff, df_cmj, df_roster
+    return df_ff, df_cmj, df_bs, df_roster
 
 try:
-    df_forceframe, df_cmj_full, df_roster = load_data()
+    df_forceframe, df_cmj_full, df_bs_full, df_roster = load_data()
 except Exception as e:
     st.error("Error loading secure data. Please check your sheet links in secrets.toml.")
     st.stop()
@@ -92,19 +96,20 @@ else:
 players = filtered_roster['Name'].dropna().unique().tolist()
 selected_player = st.sidebar.selectbox("Select Player", ["All Players"] + players)
 
-# Filter BOTH ForceFrame and CMJ Data based on selections
+# Filter all datasets based on selections
 filtered_ff = df_forceframe.copy()
 filtered_cmj = df_cmj_full.copy()
+filtered_bs = df_bs_full.copy()
 
 if selected_sport != "All Sports":
-    if 'Sport' in filtered_ff.columns:
-        filtered_ff = filtered_ff[filtered_ff['Sport'] == selected_sport]
-    if 'Sport' in filtered_cmj.columns:
-        filtered_cmj = filtered_cmj[filtered_cmj['Sport'] == selected_sport]
+    if 'Sport' in filtered_ff.columns: filtered_ff = filtered_ff[filtered_ff['Sport'] == selected_sport]
+    if 'Sport' in filtered_cmj.columns: filtered_cmj = filtered_cmj[filtered_cmj['Sport'] == selected_sport]
+    if 'Sport' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Sport'] == selected_sport]
 
 if selected_player != "All Players":
     filtered_ff = filtered_ff[filtered_ff['Name'] == selected_player]
     filtered_cmj = filtered_cmj[filtered_cmj['Name'] == selected_player]
+    filtered_bs = filtered_bs[filtered_bs['Name'] == selected_player]
 
 # ==========================================
 # 4. HELPER FUNCTIONS
@@ -149,7 +154,12 @@ hip_ir_er_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('H
 
 # Create empty DataFrames for sheets not yet connected
 nordic_data = pd.DataFrame()
-belt_squat_data = pd.DataFrame()
+
+# ---- BELT SQUAT DATA PREP ----
+if not filtered_bs.empty and 'Date' in filtered_bs.columns:
+    filtered_bs['Date'] = pd.to_datetime(filtered_bs['Date'], errors='coerce')
+    filtered_bs['Date_Str'] = filtered_bs['Date'].dt.strftime("%m/%d/%y")
+belt_squat_data = filtered_bs.copy()
 
 # ---- CMJ DATA PREP ----
 filtered_cmj['Date'] = pd.to_datetime(filtered_cmj['Date'], errors='coerce')
@@ -508,6 +518,40 @@ with testing_tab:
         with st.expander("Shoulder Log", expanded=False):
             shoulder_ath = shoulder_data[shoulder_data["Name"] == selected_intake_athlete].sort_values("Date") if not shoulder_data.empty else pd.DataFrame()
             render_clean_log(shoulder_ath, "Shoulder")
+
+        with st.expander("Isometric Belt Squat Log", expanded=False):
+            bs_ath = belt_squat_data[belt_squat_data["Name"] == selected_intake_athlete].sort_values("Date") if not belt_squat_data.empty else pd.DataFrame()
+            
+            if not bs_ath.empty:
+                # Build the strict list of columns in the exact order you requested
+                target_cols_bs = [
+                    "Test Type", "Date", "BW [KG]", "Peak Vertical Force [N]", 
+                    "Peak Vertical Force / BM [N/kg]", "RFD - 100ms [N/s]", 
+                    "Force at 100ms [N]", "Start Time to 80% Net Peak Force [s]"
+                ]
+                
+                # Filter to only the columns that actually exist
+                final_cols_bs = [c for c in target_cols_bs if c in bs_ath.columns]
+                df_bs_display = bs_ath[final_cols_bs].copy()
+                
+                # Clean up the Date format
+                if "Date" in df_bs_display.columns:
+                    df_bs_display["Date"] = pd.to_datetime(df_bs_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                
+                # Round numbers to 2 decimal places to prevent messy table stretching
+                for col in df_bs_display.columns:
+                    if col not in ["Test Type", "Date"]:
+                        df_bs_display[col] = pd.to_numeric(df_bs_display[col], errors="coerce").apply(
+                            lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
+                        )
+                
+                # Drop completely empty columns and fill scattered empty cells with a clean dash
+                df_bs_display = df_bs_display.dropna(axis=1, how='all').fillna("-")
+                
+                # Render using the native Streamlit dataframe
+                st.dataframe(df_bs_display, use_container_width=True, hide_index=True)
+            else:
+                st.info(f"No Isometric Belt Squat records for {selected_intake_athlete} in {season_label}.")
 
     # SECTION 5B: CMJ TAB
     with testing_tab_cmj:
