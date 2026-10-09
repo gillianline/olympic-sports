@@ -640,185 +640,161 @@ with testing_tab_intake:
             st.info(f"No NordBord records for {selected_intake_athlete} in {season_label}.")
 
 # SECTION 5B: CMJ TAB
-with testing_tab_cmj:
-    st.markdown(
-        f'<div class="vball-section-title">CMJ Performance Standards & History — {season_label}</div>',
-        unsafe_allow_html=True,
-    )
-
-    c_filter, c_cmj_dt = st.columns(2)
-    with c_filter:
-        selected_player_t = st.selectbox(
-            "Select Athlete:", roster_players, key=f"cmj_player_select_{season_key}"
+    with testing_tab_cmj:
+        st.markdown(
+            f'<div class="vball-section-title">CMJ Performance History — {season_label}</div>',
+            unsafe_allow_html=True,
         )
 
-    ath_all_jumps = (
-        cmj_raw[cmj_raw["Name"] == selected_player_t].sort_values("Date")
-        if not cmj_raw.empty and "Name" in cmj_raw.columns
-        else pd.DataFrame()
-    )
-    avail_cmj_dates = ath_all_jumps["Date_Str"].dropna().unique().tolist()[::-1] if not ath_all_jumps.empty else []
-
-    with c_cmj_dt:
-        selected_cmj_test_date = st.selectbox(
-            "Select CMJ Test Date:",
-            options=avail_cmj_dates if avail_cmj_dates else ["No jumps recorded"],
-            format_func=format_date_clean,
-            key=f"cmj_test_top_date_sel_{season_key}",
-        )
-
-    render_cmj_tscore_standards(
-        selected_player_t,
-        cmj_raw,
-        target_date_str=selected_cmj_test_date,
-        widget_key_suffix=f"testing_{season_key}"
-    )
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    p_cmj = (
-        cmj_data[cmj_data["Name"] == selected_player_t]
-        .sort_values("Date")
-        .copy()
-        if not cmj_data.empty
-        else pd.DataFrame()
-    )
-
-    # Find the Jump Height and RSI columns dynamically
-    jump_cols = [c for c in p_cmj.columns if "jump" in c.lower() or "height" in c.lower()]
-    j_col = jump_cols[0] if jump_cols else None
-    rsi_cols = [c for c in p_cmj.columns if "rsi" in c.lower()]
-    rsi_col = rsi_cols[0] if rsi_cols else None
-
-    if not p_cmj.empty and j_col:
-        p_cmj["Jump_Height_Clean"] = pd.to_numeric(
-            p_cmj[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True),
-            errors="coerce",
-        )
-
-        fig_jump_trend = go.Figure()
-        fig_jump_trend.add_trace(
-            go.Scatter(
-                x=p_cmj["Date"],
-                y=p_cmj["Jump_Height_Clean"],
-                name="Jump Height",
-                mode="lines+markers",
-                connectgaps=True,
-                yaxis="y",
-                line=dict(color="#FF8200", width=4),
-                marker=dict(size=8, color="#FF8200"),
+        c_filter, _ = st.columns([1, 2])
+        with c_filter:
+            selected_player_t = st.selectbox(
+                "Select Athlete:", roster_players, key=f"cmj_player_select_{season_key}"
             )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        p_cmj = (
+            cmj_data[cmj_data["Name"] == selected_player_t]
+            .sort_values("Date")
+            .copy()
+            if not cmj_data.empty
+            else pd.DataFrame()
         )
 
-        if rsi_col:
-            p_cmj["RSI_Clean"] = pd.to_numeric(
-                p_cmj[rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True),
+        # Find the Jump Height and RSI columns dynamically
+        jump_cols = [c for c in p_cmj.columns if "jump" in c.lower() or "height" in c.lower()]
+        j_col = jump_cols[0] if jump_cols else None
+        rsi_cols = [c for c in p_cmj.columns if "rsi" in c.lower()]
+        rsi_col = rsi_cols[0] if rsi_cols else None
+
+        if not p_cmj.empty and j_col:
+            p_cmj["Jump_Height_Clean"] = pd.to_numeric(
+                p_cmj[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True),
                 errors="coerce",
             )
+
+            fig_jump_trend = go.Figure()
             fig_jump_trend.add_trace(
                 go.Scatter(
                     x=p_cmj["Date"],
-                    y=p_cmj["RSI_Clean"],
-                    name="RSI Modified",
+                    y=p_cmj["Jump_Height_Clean"],
+                    name="Jump Height",
                     mode="lines+markers",
                     connectgaps=True,
-                    yaxis="y2",
-                    line=dict(color="#38BDF8", width=3, dash="dot"),
-                    marker=dict(size=8, color="#38BDF8"),
+                    yaxis="y",
+                    line=dict(color="#FF8200", width=4),
+                    marker=dict(size=8, color="#FF8200"),
                 )
             )
 
-        fig_jump_trend.update_layout(
-            height=320,
-            margin=dict(l=40, r=40, t=50, b=40),
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.08,
-                xanchor="left",
-                x=0.01,
-                font=dict(size=13, color="#0F172A"),
-            ),
-            xaxis=dict(
-                title=None,
-                type="date",
-                tickformat="%b %d\n%Y",
-                showgrid=False,
-                showline=True,
-                linewidth=1.5,
-                linecolor="#0F172A",
-                tickfont=dict(color="#64748B", size=12),
-            ),
-            yaxis=dict(
-                showgrid=False,
-                showline=True,
-                linewidth=1.5,
-                linecolor="#0F172A",
-                tickfont=dict(color="#64748B", size=12),
-                side="left",
-            ),
-            yaxis2=dict(
-                showgrid=False,
-                showline=True,
-                linewidth=1.5,
-                linecolor="#0F172A",
-                tickfont=dict(color="#64748B", size=12),
-                overlaying="y",
-                side="right",
-                anchor="x",
-            ),
-        )
-        st.plotly_chart(fig_jump_trend, use_container_width=True, key=f"cmj_trend_{season_key}")
-
-        st.divider()
-
-        st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
-        
-        # Find the actual columns in the dataframe that contain Jump Height and RSI
-        jh_col = next((c for c in p_cmj.columns if "jump height" in c.lower()), None)
-        rsi_col = next((c for c in p_cmj.columns if "rsi" in c.lower()), None)
-        
-        # Build the strict list of columns in the exact order you requested
-        target_cols = ["Test Type", "Date", "BW [KG]"]
-        if jh_col: target_cols.append(jh_col)
-        target_cols.extend(["Peak Power [W]", "Eccentric Braking RFD [N/s]"])
-        if rsi_col: target_cols.append(rsi_col)
-        target_cols.extend(["Concentric Peak Velocity [m/s]", "CMJ Stiffness [N/m]"])
-        
-        # Filter to only the columns that actually exist
-        final_cols = [c for c in target_cols if c in p_cmj.columns]
-        df_cmj_display = p_cmj[final_cols].copy()
-        
-        # Rename the long VALD names to your clean requested names
-        rename_map = {}
-        if jh_col: rename_map[jh_col] = "Jump Height (cm)"
-        if rsi_col: rename_map[rsi_col] = "RSI [m/s]"
-        df_cmj_display = df_cmj_display.rename(columns=rename_map)
-        
-        # --- THE FIX FOR THE "TERRIBLE" LOOK ---
-        
-        # 1. Clean up the Date format
-        if "Date" in df_cmj_display.columns:
-            df_cmj_display["Date"] = pd.to_datetime(df_cmj_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
-
-        # 2. Round the crazy VALD decimals to 2 places and remove NaNs
-        for col in df_cmj_display.columns:
-            if col not in ["Test Type", "Date"]:
-                # Convert to numeric, round to 2 decimals, and format cleanly
-                df_cmj_display[col] = pd.to_numeric(df_cmj_display[col], errors="coerce").apply(
-                    lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
+            if rsi_col:
+                p_cmj["RSI_Clean"] = pd.to_numeric(
+                    p_cmj[rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True),
+                    errors="coerce",
                 )
-        
-        # 3. Drop completely empty columns and fill scattered empty cells with a clean dash
-        df_cmj_display = df_cmj_display.dropna(axis=1, how='all').fillna("-")
-        
-        # 4. Use Streamlit's native dataframe for a beautiful, responsive, and sortable UI
-        st.dataframe(df_cmj_display, use_container_width=True, hide_index=True)
-        
-    else:
-        st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")
-        
+                fig_jump_trend.add_trace(
+                    go.Scatter(
+                        x=p_cmj["Date"],
+                        y=p_cmj["RSI_Clean"],
+                        name="RSI Modified",
+                        mode="lines+markers",
+                        connectgaps=True,
+                        yaxis="y2",
+                        line=dict(color="#38BDF8", width=3, dash="dot"),
+                        marker=dict(size=8, color="#38BDF8"),
+                    )
+                )
+
+            fig_jump_trend.update_layout(
+                height=320,
+                margin=dict(l=40, r=40, t=50, b=40),
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.08,
+                    xanchor="left",
+                    x=0.01,
+                    font=dict(size=13, color="#0F172A"),
+                ),
+                xaxis=dict(
+                    title=None,
+                    type="date",
+                    tickformat="%b %d\n%Y",
+                    showgrid=False,
+                    showline=True,
+                    linewidth=1.5,
+                    linecolor="#0F172A",
+                    tickfont=dict(color="#64748B", size=12),
+                ),
+                yaxis=dict(
+                    showgrid=False,
+                    showline=True,
+                    linewidth=1.5,
+                    linecolor="#0F172A",
+                    tickfont=dict(color="#64748B", size=12),
+                    side="left",
+                ),
+                yaxis2=dict(
+                    showgrid=False,
+                    showline=True,
+                    linewidth=1.5,
+                    linecolor="#0F172A",
+                    tickfont=dict(color="#64748B", size=12),
+                    overlaying="y",
+                    side="right",
+                    anchor="x",
+                ),
+            )
+            st.plotly_chart(fig_jump_trend, use_container_width=True, key=f"cmj_trend_{season_key}")
+
+            st.divider()
+
+            st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
+            
+            # Find the actual columns in the dataframe that contain Jump Height and RSI
+            jh_col = next((c for c in p_cmj.columns if "jump height" in c.lower()), None)
+            rsi_col = next((c for c in p_cmj.columns if "rsi" in c.lower()), None)
+            
+            # Build the strict list of columns in the exact order you requested
+            target_cols = ["Test Type", "Date", "BW [KG]"]
+            if jh_col: target_cols.append(jh_col)
+            target_cols.extend(["Peak Power [W]", "Eccentric Braking RFD [N/s]"])
+            if rsi_col: target_cols.append(rsi_col)
+            target_cols.extend(["Concentric Peak Velocity [m/s]", "CMJ Stiffness [N/m]"])
+            
+            # Filter to only the columns that actually exist
+            final_cols = [c for c in target_cols if c in p_cmj.columns]
+            df_cmj_display = p_cmj[final_cols].copy()
+            
+            # Rename the long VALD names to your clean requested names
+            rename_map = {}
+            if jh_col: rename_map[jh_col] = "Jump Height (cm)"
+            if rsi_col: rename_map[rsi_col] = "RSI [m/s]"
+            df_cmj_display = df_cmj_display.rename(columns=rename_map)
+            
+            # 1. Clean up the Date format
+            if "Date" in df_cmj_display.columns:
+                df_cmj_display["Date"] = pd.to_datetime(df_cmj_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+
+            # 2. Round the crazy VALD decimals to 2 places and remove NaNs
+            for col in df_cmj_display.columns:
+                if col not in ["Test Type", "Date"]:
+                    # Convert to numeric, round to 2 decimals, and format cleanly
+                    df_cmj_display[col] = pd.to_numeric(df_cmj_display[col], errors="coerce").apply(
+                        lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
+                    )
+            
+            # 3. Drop completely empty columns and fill scattered empty cells with a clean dash
+            df_cmj_display = df_cmj_display.dropna(axis=1, how='all').fillna("-")
+            
+            # 4. Use Streamlit's native dataframe for a beautiful, responsive, and sortable UI
+            st.dataframe(df_cmj_display, use_container_width=True, hide_index=True)
+            
+        else:
+            st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")        
         
 # SECTION 5C: OVERALL PROFILE
 with testing_tab_overall:
