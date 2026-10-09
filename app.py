@@ -378,7 +378,6 @@ with testing_tab_intake:
                     bs_ath["PVF_Calc"] = pd.to_numeric(bs_ath[f_c].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce").fillna(0.0)
                     peak_bs_val = bs_ath["PVF_Calc"].max()
                     rec_bs_val = bs_ath.sort_values("Date").iloc[-1]["PVF_Calc"]
-                    init_bs_val = bs_ath.sort_values("Date").iloc[0]["PVF_Calc"]
                     date_str = format_date_clean(bs_ath.sort_values("Date").iloc[-1].get("Date"))
 
                     st.markdown(
@@ -389,7 +388,7 @@ with testing_tab_intake:
                                 <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
                             </div>
                             <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                                <b>Peak Vertical Force:</b> Max {peak_bs_val:.1f}N &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(rec_bs_val, init_bs_val, '{:.1f}', 'N')}
+                                <b>Peak Vertical Force:</b> Max {peak_bs_val:.1f}N &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(rec_bs_val, peak_bs_val, '{:.1f}', 'N')}
                             </div>
                         </div>
                         """,
@@ -404,8 +403,8 @@ with testing_tab_intake:
                 hip_ad = hip_ath[hip_ath[dir_col].astype(str).str.contains("AD|Adduction", case=False, na=False)] if dir_col else hip_ath
                 hip_ab = hip_ath[hip_ath[dir_col].astype(str).str.contains("AB|Abduction", case=False, na=False)] if dir_col else hip_ath
 
-                (ad_maxL, ad_maxR), (ad_recL, ad_recR), (ad_initL, ad_initR) = get_peak_and_recent_row(hip_ad, l_col, r_col)
-                (ab_maxL, ab_maxR), (ab_recL, ab_recR), (ab_initL, ab_initR) = get_peak_and_recent_row(hip_ab, l_col, r_col)
+                (ad_maxL, ad_maxR), (ad_recL, ad_recR), (_, _) = get_peak_and_recent_row(hip_ad, l_col, r_col)
+                (ab_maxL, ab_maxR), (ab_recL, ab_recR), (_, _) = get_peak_and_recent_row(hip_ab, l_col, r_col)
                 date_str = format_date_clean(hip_ath.sort_values("Date").iloc[-1].get("Date")) if not hip_ath.empty else "N/A"
 
                 st.markdown(
@@ -416,8 +415,8 @@ with testing_tab_intake:
                             <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
                         </div>
                         <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Hip Adduction:</b> Max L {ad_maxL:.1f}N | R {ad_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_recL, ad_initL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_recR, ad_initR, '{:.1f}', 'N')}<br>
-                            <b>Hip Abduction:</b> Max L {ab_maxL:.1f}N | R {ab_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_recL, ab_initL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_recR, ab_initR, '{:.1f}', 'N')}
+                            <b>Hip Adduction:</b> Max L {ad_maxL:.1f}N | R {ad_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_recL, ad_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_recR, ad_maxR, '{:.1f}', 'N')}<br>
+                            <b>Hip Abduction:</b> Max L {ab_maxL:.1f}N | R {ab_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_recL, ab_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_recR, ab_maxR, '{:.1f}', 'N')}
                         </div>
                     </div>
                     """,
@@ -432,8 +431,8 @@ with testing_tab_intake:
                 knee_ext = sh_ath[sh_ath[dir_c].astype(str).str.contains("Extension", case=False, na=False)] if dir_c else sh_ath
                 knee_flx = sh_ath[sh_ath[dir_c].astype(str).str.contains("Flexion", case=False, na=False)] if dir_c else sh_ath
 
-                (ke_maxL, ke_maxR), (ke_recL, ke_recR), (ke_initL, ke_initR) = get_peak_and_recent_row(knee_ext, l_col, r_col)
-                (kf_maxL, kf_maxR), (kf_recL, kf_recR), (kf_initL, kf_initR) = get_peak_and_recent_row(knee_flx, l_col, r_col)
+                (ke_maxL, ke_maxR), (ke_recL, ke_recR), (_, _) = get_peak_and_recent_row(knee_ext, l_col, r_col)
+                (kf_maxL, kf_maxR), (kf_recL, kf_recR), (_, _) = get_peak_and_recent_row(knee_flx, l_col, r_col)
                 latest_date_str = format_date_clean(knee_ext.sort_values("Date").iloc[-1].get("Date")) if not knee_ext.empty else "N/A"
 
                 st.markdown(
@@ -444,8 +443,8 @@ with testing_tab_intake:
                             <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {latest_date_str}</span>
                         </div>
                         <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Extension:</b> Max L {ke_maxL:.1f}N | R {ke_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ke_recL, ke_initL, '{:.1f}', 'N')} | R {render_val_with_arrow(ke_recR, ke_initR, '{:.1f}', 'N')}<br>
-                            <b>Flexion:</b> Max L {kf_maxL:.1f}N | R {kf_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(kf_recL, kf_initL, '{:.1f}', 'N')} | R {render_val_with_arrow(kf_recR, kf_initR, '{:.1f}', 'N')}
+                            <b>Extension:</b> Max L {ke_maxL:.1f}N | R {ke_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ke_recL, ke_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ke_recR, ke_maxR, '{:.1f}', 'N')}<br>
+                            <b>Flexion:</b> Max L {kf_maxL:.1f}N | R {kf_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(kf_recL, kf_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(kf_recR, kf_maxR, '{:.1f}', 'N')}
                         </div>
                     </div>
                     """,
@@ -456,7 +455,7 @@ with testing_tab_intake:
             if not nord_ath.empty:
                 l_col = next((c for c in nord_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
                 r_col = next((c for c in nord_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
-                (nord_maxL, nord_maxR), (nord_recL, nord_recR), (nord_initL, nord_initR) = get_peak_and_recent_row(nord_ath, l_col, r_col)
+                (nord_maxL, nord_maxR), (nord_recL, nord_recR), (_, _) = get_peak_and_recent_row(nord_ath, l_col, r_col)
                 date_str = format_date_clean(nord_ath.sort_values("Date").iloc[-1].get("Date")) if not nord_ath.empty else "N/A"
 
                 st.markdown(
@@ -467,7 +466,7 @@ with testing_tab_intake:
                             <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
                         </div>
                         <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Peak Force:</b> L {nord_maxL:.1f}N | R {nord_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(nord_recL, nord_initL, '{:.1f}', 'N')} | R {render_val_with_arrow(nord_recR, nord_initR, '{:.1f}', 'N')}
+                            <b>Peak Force:</b> L {nord_maxL:.1f}N | R {nord_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(nord_recL, nord_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(nord_recR, nord_maxR, '{:.1f}', 'N')}
                         </div>
                     </div>
                     """,
@@ -478,7 +477,7 @@ with testing_tab_intake:
             if not calf_ath.empty:
                 l_col = next((c for c in calf_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
                 r_col = next((c for c in calf_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
-                (ank_maxL, ank_maxR), (ank_recL, ank_recR), (ank_initL, ank_initR) = get_peak_and_recent_row(calf_ath, l_col, r_col)
+                (ank_maxL, ank_maxR), (ank_recL, ank_recR), (_, _) = get_peak_and_recent_row(calf_ath, l_col, r_col)
                 date_str = format_date_clean(calf_ath.sort_values("Date").iloc[-1].get("Date")) if not calf_ath.empty else "N/A"
 
                 st.markdown(
@@ -489,7 +488,7 @@ with testing_tab_intake:
                             <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
                         </div>
                         <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Max Force:</b> L {ank_maxL:.1f}N | R {ank_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ank_recL, ank_initL, '{:.1f}', 'N')} | R {render_val_with_arrow(ank_recR, ank_initR, '{:.1f}', 'N')}
+                            <b>Max Force:</b> L {ank_maxL:.1f}N | R {ank_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ank_recL, ank_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ank_recR, ank_maxR, '{:.1f}', 'N')}
                         </div>
                     </div>
                     """,
