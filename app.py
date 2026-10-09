@@ -643,6 +643,8 @@ with testing_tab:
 
             st.divider()
 
+            st.divider()
+
             st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
             
             # Find the actual columns in the dataframe that contain Jump Height and RSI
@@ -673,7 +675,6 @@ with testing_tab:
             st.markdown(render_vball_table(df_cmj_display), unsafe_allow_html=True)
         else:
             st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")
-            
             
     # SECTION 5C: OVERALL PROFILE
     with testing_tab_overall:
