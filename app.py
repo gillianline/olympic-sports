@@ -87,38 +87,61 @@ st.markdown("---")
 
 st.sidebar.header("Filter Options")
 
-# Sport Filter
-if 'Sport' in df_roster.columns:
-    sports = df_roster['Sport'].dropna().unique().tolist()
+# 1. Season Filter (New!)
+if 'Season' in df_roster.columns:
+    seasons = df_roster['Season'].dropna().astype(str).unique().tolist()
+    seasons.sort(reverse=True) # Puts newest season at the top
+    selected_season = st.sidebar.selectbox("Select Season", ["All Seasons"] + seasons)
+else:
+    selected_season = "All Seasons"
+
+# Pre-filter roster so the next dropdowns are accurate to the season
+filtered_roster = df_roster.copy()
+if selected_season != "All Seasons" and 'Season' in filtered_roster.columns:
+    filtered_roster = filtered_roster[filtered_roster['Season'].astype(str) == selected_season]
+
+# 2. Sport Filter
+if 'Sport' in filtered_roster.columns:
+    sports = filtered_roster['Sport'].dropna().astype(str).unique().tolist()
     selected_sport = st.sidebar.selectbox("Select Sport", ["All Sports"] + sports)
 else:
     selected_sport = "All Sports"
 
-# Player Filter
 if selected_sport != "All Sports":
-    filtered_roster = df_roster[df_roster['Sport'] == selected_sport]
-else:
-    filtered_roster = df_roster
+    filtered_roster = filtered_roster[filtered_roster['Sport'].astype(str) == selected_sport]
 
-players = filtered_roster['Name'].dropna().unique().tolist()
+# 3. Player Filter
+players = filtered_roster['Name'].dropna().astype(str).unique().tolist()
 selected_player = st.sidebar.selectbox("Select Player", ["All Players"] + players)
 
+
+# Filter all raw datasets based on sidebar selections
 filtered_ff = df_forceframe.copy()
 filtered_cmj = df_cmj_full.copy()
 filtered_bs = df_bs_full.copy()
-filtered_nb = df_nb_full.copy() # Add NordBord filter variable
+filtered_nb = df_nb_full.copy()
 
+# Apply Season Filter
+if selected_season != "All Seasons":
+    if 'Season' in filtered_ff.columns: filtered_ff = filtered_ff[filtered_ff['Season'].astype(str) == selected_season]
+    if 'Season' in filtered_cmj.columns: filtered_cmj = filtered_cmj[filtered_cmj['Season'].astype(str) == selected_season]
+    if 'Season' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Season'].astype(str) == selected_season]
+    if 'Season' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Season'].astype(str) == selected_season]
+
+# Apply Sport Filter
 if selected_sport != "All Sports":
-    if 'Sport' in filtered_ff.columns: filtered_ff = filtered_ff[filtered_ff['Sport'] == selected_sport]
-    if 'Sport' in filtered_cmj.columns: filtered_cmj = filtered_cmj[filtered_cmj['Sport'] == selected_sport]
-    if 'Sport' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Sport'] == selected_sport]
-    if 'Sport' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Sport'] == selected_sport]
+    if 'Sport' in filtered_ff.columns: filtered_ff = filtered_ff[filtered_ff['Sport'].astype(str) == selected_sport]
+    if 'Sport' in filtered_cmj.columns: filtered_cmj = filtered_cmj[filtered_cmj['Sport'].astype(str) == selected_sport]
+    if 'Sport' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Sport'].astype(str) == selected_sport]
+    if 'Sport' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Sport'].astype(str) == selected_sport]
 
+# Apply Player Filter
 if selected_player != "All Players":
-    filtered_ff = filtered_ff[filtered_ff['Name'] == selected_player]
-    filtered_cmj = filtered_cmj[filtered_cmj['Name'] == selected_player]
-    filtered_bs = filtered_bs[filtered_bs['Name'] == selected_player]
-    filtered_nb = filtered_nb[filtered_nb['Name'] == selected_player]
+    filtered_ff = filtered_ff[filtered_ff['Name'].astype(str) == selected_player]
+    filtered_cmj = filtered_cmj[filtered_cmj['Name'].astype(str) == selected_player]
+    filtered_bs = filtered_bs[filtered_bs['Name'].astype(str) == selected_player]
+    filtered_nb = filtered_nb[filtered_nb['Name'].astype(str) == selected_player]
+    
     
 # ==========================================
 # 4. HELPER FUNCTIONS
@@ -181,9 +204,12 @@ if not filtered_nb.empty and 'Date' in filtered_nb.columns:
 nordic_data = filtered_nb.copy()
 
 # Variables expected by your snippet
-season_label = "2026 Season"
-season_key = "soc26"
-roster_players = df_roster['Name'].dropna().unique().tolist()
+# Variables expected by your snippet (Now Dynamic!)
+season_label = selected_season if selected_season != "All Seasons" else "All Seasons"
+season_key = season_label.replace(" ", "_").lower()
+
+# Ensure the athlete selectboxes in the tabs only show players valid for this season/sport
+roster_players = filtered_roster['Name'].dropna().unique().tolist()
 
 # ==========================================
 # 6. DASHBOARD UI (THE TESTING TAB)
