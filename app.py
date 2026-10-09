@@ -40,7 +40,7 @@ if not check_password():
 # ==========================================
 # 2. LOAD SECRET DATA
 # ==========================================
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=0)
 def load_data():
     df_ff = pd.read_csv(st.secrets["sheet_forceframe"])
     df_roster = pd.read_csv(st.secrets["sheet_roster"])
