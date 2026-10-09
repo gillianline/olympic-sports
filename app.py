@@ -45,32 +45,39 @@ def load_data():
     df_ff = pd.read_csv(st.secrets["sheet_forceframe"])
     df_roster = pd.read_csv(st.secrets["sheet_roster"])
     df_cmj = pd.read_csv(st.secrets["sheet_cmj"])
-    df_bs = pd.read_csv(st.secrets["sheet_belt_squat"]) # Load Belt Squat
+    df_bs = pd.read_csv(st.secrets["sheet_belt_squat"])
+    df_nb = pd.read_csv(st.secrets["sheet_nordbord"]) # Load NordBord
     
     # Clean up column names: remove hidden spaces
     df_ff.columns = df_ff.columns.str.strip()
     df_roster.columns = df_roster.columns.str.strip()
     df_cmj.columns = df_cmj.columns.str.strip()
     df_bs.columns = df_bs.columns.str.strip()
+    df_nb.columns = df_nb.columns.str.strip()
+    
+    # Standardize the Date column name for NordBord if it's called "Date UTC"
+    if "Date UTC" in df_nb.columns:
+        df_nb = df_nb.rename(columns={"Date UTC": "Date"})
     
     df_ff['Name'] = df_ff['Name'].astype(str)
     df_roster['Name'] = df_roster['Name'].astype(str)
     df_cmj['Name'] = df_cmj['Name'].astype(str)
     df_bs['Name'] = df_bs['Name'].astype(str)
+    df_nb['Name'] = df_nb['Name'].astype(str)
     
     # Merge Roster info (Sport, Position)
     df_ff = pd.merge(df_ff, df_roster, on="Name", how="left")
     df_cmj = pd.merge(df_cmj, df_roster, on="Name", how="left")
     df_bs = pd.merge(df_bs, df_roster, on="Name", how="left")
+    df_nb = pd.merge(df_nb, df_roster, on="Name", how="left")
     
-    return df_ff, df_cmj, df_bs, df_roster
+    return df_ff, df_cmj, df_bs, df_nb, df_roster
 
 try:
-    df_forceframe, df_cmj_full, df_bs_full, df_roster = load_data()
+    df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_roster = load_data()
 except Exception as e:
     st.error("Error loading secure data. Please check your sheet links in secrets.toml.")
     st.stop()
-
 
 # ==========================================
 # 3. DASHBOARD UI & SIDEBAR
@@ -96,21 +103,23 @@ else:
 players = filtered_roster['Name'].dropna().unique().tolist()
 selected_player = st.sidebar.selectbox("Select Player", ["All Players"] + players)
 
-# Filter all datasets based on selections
 filtered_ff = df_forceframe.copy()
 filtered_cmj = df_cmj_full.copy()
 filtered_bs = df_bs_full.copy()
+filtered_nb = df_nb_full.copy() # Add NordBord filter variable
 
 if selected_sport != "All Sports":
     if 'Sport' in filtered_ff.columns: filtered_ff = filtered_ff[filtered_ff['Sport'] == selected_sport]
     if 'Sport' in filtered_cmj.columns: filtered_cmj = filtered_cmj[filtered_cmj['Sport'] == selected_sport]
     if 'Sport' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Sport'] == selected_sport]
+    if 'Sport' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Sport'] == selected_sport]
 
 if selected_player != "All Players":
     filtered_ff = filtered_ff[filtered_ff['Name'] == selected_player]
     filtered_cmj = filtered_cmj[filtered_cmj['Name'] == selected_player]
     filtered_bs = filtered_bs[filtered_bs['Name'] == selected_player]
-
+    filtered_nb = filtered_nb[filtered_nb['Name'] == selected_player]
+    
 # ==========================================
 # 4. HELPER FUNCTIONS
 # ==========================================
@@ -133,10 +142,8 @@ def render_cmj_tscore_standards(player, raw_df, target_date_str, widget_key_suff
 
 # ==========================================
 # 5. DATA PREPARATION FOR HUD
-# ==========================================
-# ==========================================
-# 5. DATA PREPARATION FOR HUD
-# ==========================================
+# =========================================
+
 df_forceframe['Date'] = pd.to_datetime(df_forceframe['Date'], errors='coerce')
 df_forceframe['Date_Str'] = df_forceframe['Date'].dt.strftime("%m/%d/%y")
 
@@ -166,6 +173,12 @@ filtered_cmj['Date'] = pd.to_datetime(filtered_cmj['Date'], errors='coerce')
 filtered_cmj['Date_Str'] = filtered_cmj['Date'].dt.strftime("%m/%d/%y")
 cmj_data = filtered_cmj.copy()
 cmj_raw = filtered_cmj.copy()
+
+# ---- NORDBORD DATA PREP ----
+if not filtered_nb.empty and 'Date' in filtered_nb.columns:
+    filtered_nb['Date'] = pd.to_datetime(filtered_nb['Date'], errors='coerce')
+    filtered_nb['Date_Str'] = filtered_nb['Date'].dt.strftime("%m/%d/%y")
+nordic_data = filtered_nb.copy()
 
 # Variables expected by your snippet
 season_label = "2026 Season"
@@ -552,6 +565,39 @@ with testing_tab:
                 st.dataframe(df_bs_display, use_container_width=True, hide_index=True)
             else:
                 st.info(f"No Isometric Belt Squat records for {selected_intake_athlete} in {season_label}.")
+
+        with st.expander("NordBord Hamstring Log", expanded=False):
+            nb_ath = nordic_data[nordic_data["Name"] == selected_intake_athlete].sort_values("Date") if not nordic_data.empty else pd.DataFrame()
+            
+            if not nb_ath.empty:
+                # Target columns based exactly on your Excel sheet
+                target_cols_nb = [
+                    "Test", "Date", "L Max Force (N)", "R Max Force (N)", 
+                    "Max Imbalance (%)", "L Max Torque (Nm)", "R Max Torque (Nm)"
+                ]
+                
+                # Filter to only columns that actually exist
+                final_cols_nb = [c for c in target_cols_nb if c in nb_ath.columns]
+                df_nb_display = nb_ath[final_cols_nb].copy()
+                
+                # Clean up the Date format
+                if "Date" in df_nb_display.columns:
+                    df_nb_display["Date"] = pd.to_datetime(df_nb_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                
+                # Round numbers to 2 decimal places to prevent messy table stretching
+                for col in df_nb_display.columns:
+                    if col not in ["Test", "Date"]:
+                        df_nb_display[col] = pd.to_numeric(df_nb_display[col], errors="coerce").apply(
+                            lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
+                        )
+                
+                # Drop completely empty columns and fill scattered empty cells with a clean dash
+                df_nb_display = df_nb_display.dropna(axis=1, how='all').fillna("-")
+                
+                # Render using the native Streamlit dataframe
+                st.dataframe(df_nb_display, use_container_width=True, hide_index=True)
+            else:
+                st.info(f"No NordBord records for {selected_intake_athlete} in {season_label}.")
 
     # SECTION 5B: CMJ TAB
     with testing_tab_cmj:
