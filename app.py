@@ -435,7 +435,7 @@ with testing_tab_intake:
                     f"""
                     <div class="hud-metric-row-light-blue">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">6</span>ATHLETIC SHOULDER (ASH)</span>
+                            <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">6</span>ASH</span>
                             <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
                         </div>
                         <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
@@ -658,7 +658,7 @@ with testing_tab_intake:
             st.markdown(render_vball_table(df_final), unsafe_allow_html=True)
 
         if not ash_ath_intake.empty:
-            with st.expander("Athletic Shoulder (ASH) Log", expanded=False):
+            with st.expander("ASH Log", expanded=False):
                 target_cols_ash = [
                     "Date", "Test Type", "Isometric Type", "Position", 
                     "Peak Vertical Force [N] (L)", "Peak Vertical Force [N] (R)", 
@@ -1401,7 +1401,7 @@ with testing_tab_overall:
                 l_val = pd.to_numeric(best_ash[l_col], errors="coerce")
                 r_val = pd.to_numeric(best_ash[r_col], errors="coerce")
                 records.append({
-                    "Category": "Athletic Shoulder (ASH) Test (L/R)",
+                    "Category": "ASH Test (L/R)",
                     "Best Test Value": f"{l_val:.1f} N / {r_val:.1f} N",
                     "Date Achieved": format_date_clean(best_ash.get("Date"))
                 })
