@@ -786,7 +786,7 @@ with testing_tab_cmj:
 # ==========================================
 with testing_tab_wellness:
     st.markdown(
-        f'<div class="vball-section-title">Neuromuscular Readiness & Wellness ({season_label})</div>',
+        f'<div class="vball-section-title">Readiness & Wellness ({season_label})</div>',
         unsafe_allow_html=True,
     )
     
