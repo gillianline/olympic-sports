@@ -50,7 +50,7 @@ def load_data():
     df_bs = pd.read_csv(st.secrets["sheet_belt_squat"])
     df_nb = pd.read_csv(st.secrets["sheet_nordbord"]) 
     df_dj = pd.read_csv(st.secrets["sheet_drop_jump"]) 
-    df_ash = pd.read_csv(st.secrets["sheet_ash"]) # New ASH data stream
+    df_ash = pd.read_csv(st.secrets["sheet_ash"]) 
     
     # Clean up column names: remove hidden spaces and fix capitalization
     for df in [df_ff, df_roster, df_cmj, df_bs, df_nb, df_dj, df_ash]:
@@ -306,9 +306,17 @@ with testing_tab_intake:
     hud_col1, hud_col2 = st.columns([1.2, 1.8])
 
     with hud_col1:
-        # Dynamic Nodes based on data presence
+        # Dynamic Anatomical SVG Pointers Based on Data Presence
+        node_6_svg = """
+        <!-- 6. Shoulder (ASH Test) - Right Side -->
+        <line x1="84" y1="44" x2="112" y2="44" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="84" cy="44" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="112" y="36" width="16" height="16" rx="4" fill="#4895DB" />
+        <text x="120" y="48" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">6</text>
+        """ if not ash_ath_intake.empty else ""
+
         node_1_svg = """
-        <!-- 1. Belt Squat (Core / Waist) -->
+        <!-- 1. Belt Squat (Core / Waist) - Right Side -->
         <line x1="68" y1="84" x2="112" y2="84" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
         <circle cx="68" cy="84" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
         <rect x="112" y="76" width="16" height="16" rx="4" fill="#FF8200" />
@@ -316,51 +324,43 @@ with testing_tab_intake:
         """ if not bs_ath.empty else ""
         
         node_2_svg = """
-        <!-- 2. Hip (AD/AB & IR/ER) -->
-        <line x1="58" y1="116" x2="24" y2="116" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="58" cy="116" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="8" y="108" width="16" height="16" rx="4" fill="#4895DB" />
-        <text x="16" y="120" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">2</text>
+        <!-- 2. Hip (AD/AB) - Left Side -->
+        <line x1="50" y1="106" x2="24" y2="106" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="50" cy="106" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="8" y="98" width="16" height="16" rx="4" fill="#4895DB" />
+        <text x="16" y="110" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">2</text>
         """ if not hip_ath.empty else ""
         
+        node_4_svg = """
+        <!-- 4. Hamstring (NordBord) - Left Side -->
+        <line x1="52" y1="135" x2="24" y2="135" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="52" cy="135" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="8" y="127" width="16" height="16" rx="4" fill="#4895DB" />
+        <text x="16" y="139" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">4</text>
+        """ if not nord_ath.empty else ""
+
         node_3_svg = """
-        <!-- 3. Knee (Ext/Flex) -->
-        <line x1="64" y1="140" x2="112" y2="140" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="64" cy="140" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="112" y="132" width="16" height="16" rx="4" fill="#FF8200" />
-        <text x="120" y="144" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">3</text>
+        <!-- 3. Knee (Ext/Flex) - Right Side -->
+        <line x1="82" y1="148" x2="112" y2="148" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="82" cy="148" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="112" y="140" width="16" height="16" rx="4" fill="#FF8200" />
+        <text x="120" y="152" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">3</text>
         """ if not sh_ath.empty else ""
         
-        node_4_svg = """
-        <!-- 4. Hamstring (NordBord) -->
-        <line x1="56" y1="155" x2="24" y2="155" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="56" cy="155" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="8" y="147" width="16" height="16" rx="4" fill="#4895DB" />
-        <text x="16" y="159" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">4</text>
-        """ if not nord_ath.empty else ""
-        
         node_5_svg = """
-        <!-- 5. Ankle -->
-        <line x1="72" y1="178" x2="112" y2="178" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="72" cy="178" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="112" y="170" width="16" height="16" rx="4" fill="#FF8200" />
-        <text x="120" y="182" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">5</text>
+        <!-- 5. Ankle - Right Side -->
+        <line x1="80" y1="185" x2="112" y2="185" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="80" cy="185" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="112" y="177" width="16" height="16" rx="4" fill="#FF8200" />
+        <text x="120" y="189" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">5</text>
         """ if not calf_ath.empty else ""
 
-        node_6_svg = """
-        <!-- 6. Shoulder (ASH Test) -->
-        <line x1="58" y1="50" x2="24" y2="50" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="58" cy="50" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="8" y="42" width="16" height="16" rx="4" fill="#4895DB" />
-        <text x="16" y="54" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">6</text>
-        """ if not ash_ath_intake.empty else ""
-
         node_7_svg = """
-        <!-- 7. Drop Jump -->
-        <line x1="68" y1="200" x2="112" y2="200" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="68" cy="200" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="112" y="192" width="16" height="16" rx="4" fill="#FF8200" />
-        <text x="120" y="204" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">7</text>
+        <!-- 7. Drop Jump (Feet) - Left Side -->
+        <line x1="68" y1="208" x2="24" y2="208" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="68" cy="208" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="8" y="200" width="16" height="16" rx="4" fill="#FF8200" />
+        <text x="16" y="212" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">7</text>
         """ if not dj_ath_intake.empty else ""
 
         hud_svg_html = f"""
@@ -393,12 +393,12 @@ with testing_tab_intake:
                         <line x1="51" y1="116" x2="85" y2="116" stroke="#D32F2F" stroke-width="1.1" />
                         <line x1="55" y1="168" x2="81" y2="168" stroke="#D32F2F" stroke-width="1.1" />
                     </g>
+                    {node_6_svg}
                     {node_1_svg}
                     {node_2_svg}
-                    {node_3_svg}
                     {node_4_svg}
+                    {node_3_svg}
                     {node_5_svg}
-                    {node_6_svg}
                     {node_7_svg}
                 </svg>
             </div>
@@ -426,25 +426,45 @@ with testing_tab_intake:
         if has_data:
             # 6. ASH TEST (Matches Node 6 - Shoulders)
             if not ash_ath_intake.empty:
+                iso_col = next((c for c in ash_ath_intake.columns if "isometric type" in c.lower()), None)
+                pos_col = next((c for c in ash_ath_intake.columns if "position" in c.lower()), None)
                 l_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(l)" in c.lower()), None)
                 r_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(r)" in c.lower()), None)
-                (ash_maxL, ash_maxR), (ash_recL, ash_recR), _ = get_peak_and_recent_row(ash_ath_intake, l_col, r_col)
-                date_str = format_date_clean(ash_ath_intake.sort_values("Date").iloc[-1].get("Date"))
 
-                st.markdown(
-                    f"""
-                    <div class="hud-metric-row-light-blue">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">6</span>ASH</span>
-                            <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
-                        </div>
-                        <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Peak Force:</b> Max L {ash_maxL:.1f}N | R {ash_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ash_recL, ash_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ash_recR, ash_maxR, '{:.1f}', 'N')}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                if iso_col and pos_col and l_col and r_col:
+                    ash_ath_intake_clean = ash_ath_intake.copy()
+                    ash_ath_intake_clean[pos_col] = ash_ath_intake_clean[pos_col].fillna("None").replace("", "None")
+                    
+                    combos = ash_ath_intake_clean[[iso_col, pos_col]].drop_duplicates().sort_values(by=[iso_col, pos_col])
+                    
+                    ash_html = ""
+                    date_str = format_date_clean(ash_ath_intake.sort_values("Date").iloc[-1].get("Date"))
+
+                    for _, row in combos.iterrows():
+                        itype = row[iso_col]
+                        ipos = row[pos_col]
+                        sub_df = ash_ath_intake_clean[(ash_ath_intake_clean[iso_col] == itype) & (ash_ath_intake_clean[pos_col] == ipos)]
+                        
+                        (maxL, maxR), (recL, recR), _ = get_peak_and_recent_row(sub_df, l_col, r_col)
+                        
+                        divider = '<div style="margin-top:6px; margin-bottom:6px; border-bottom:1px solid #D5E5E8;"></div>' if ash_html != "" else ""
+                        ash_html += f"{divider}<b>{itype} ({ipos}):</b> Max L {maxL:.1f}N | R {maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(recL, maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(recR, maxR, '{:.1f}', 'N')}<br>"
+                
+                    if ash_html != "":
+                        st.markdown(
+                            f"""
+                            <div class="hud-metric-row-light-blue">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">6</span>ASH</span>
+                                    <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+                                </div>
+                                <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
+                                    {ash_html}
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
 
             # 1. BELT SQUAT (Matches Node 1 - Core/Waist)
             if not bs_ath.empty:
@@ -692,11 +712,6 @@ with testing_tab_intake:
             with st.expander("Hip IR/ER Log", expanded=False):
                 render_clean_log(hip_ir_ath, "Hip IR/ER")
             
-        shoulder_ath = shoulder_data[shoulder_data["Name"] == selected_intake_athlete].sort_values("Date") if not shoulder_data.empty else pd.DataFrame()
-        if not shoulder_ath.empty:
-            with st.expander("Shoulder Log", expanded=False):
-                render_clean_log(shoulder_ath, "Shoulder")
-
         if not bs_ath.empty:
             with st.expander("Isometric Belt Squat Log", expanded=False):
                 target_cols_bs = [
@@ -1391,20 +1406,29 @@ with testing_tab_overall:
 
     p_ash_ov = ash_data[ash_data["Name"] == selected_ov_athlete] if not ash_data.empty and "Name" in ash_data.columns else pd.DataFrame()
     if not p_ash_ov.empty:
+        iso_c = next((c for c in p_ash_ov.columns if "isometric type" in c.lower()), None)
+        pos_c = next((c for c in p_ash_ov.columns if "position" in c.lower()), None)
         l_col = next((c for c in p_ash_ov.columns if "force" in c.lower() and "(l)" in c.lower()), None)
         r_col = next((c for c in p_ash_ov.columns if "force" in c.lower() and "(r)" in c.lower()), None)
-        if l_col and r_col:
-            p_ash_ov["Peak_Val"] = p_ash_ov[[l_col, r_col]].apply(pd.to_numeric, errors="coerce").max(axis=1)
-            valid_ash = p_ash_ov.dropna(subset=["Peak_Val"])
-            if not valid_ash.empty:
-                best_ash = valid_ash.sort_values("Peak_Val", ascending=False).iloc[0]
-                l_val = pd.to_numeric(best_ash[l_col], errors="coerce")
-                r_val = pd.to_numeric(best_ash[r_col], errors="coerce")
-                records.append({
-                    "Category": "ASH Test (L/R)",
-                    "Best Test Value": f"{l_val:.1f} N / {r_val:.1f} N",
-                    "Date Achieved": format_date_clean(best_ash.get("Date"))
-                })
+        if iso_c and pos_c and l_col and r_col:
+            p_ash_ov_clean = p_ash_ov.copy()
+            p_ash_ov_clean[pos_c] = p_ash_ov_clean[pos_c].fillna("None").replace("", "None")
+            p_ash_ov_clean["Peak_Val"] = p_ash_ov_clean[[l_col, r_col]].apply(pd.to_numeric, errors="coerce").max(axis=1)
+            combos = p_ash_ov_clean[[iso_c, pos_c]].drop_duplicates()
+            for _, row in combos.iterrows():
+                itype = row[iso_c]
+                ipos = row[pos_c]
+                sub_df = p_ash_ov_clean[(p_ash_ov_clean[iso_c] == itype) & (p_ash_ov_clean[pos_c] == ipos)]
+                valid_ash = sub_df.dropna(subset=["Peak_Val"])
+                if not valid_ash.empty:
+                    best_ash = valid_ash.sort_values("Peak_Val", ascending=False).iloc[0]
+                    l_val = pd.to_numeric(best_ash[l_col], errors="coerce")
+                    r_val = pd.to_numeric(best_ash[r_col], errors="coerce")
+                    records.append({
+                        "Category": f"ASH Test - {itype} ({ipos})",
+                        "Best Test Value": f"{l_val:.1f} N / {r_val:.1f} N",
+                        "Date Achieved": format_date_clean(best_ash.get("Date"))
+                    })
 
     p_cmj_ov = cmj_data[cmj_data["Name"] == selected_ov_athlete] if not cmj_data.empty and "Name" in cmj_data.columns else pd.DataFrame()
     if not p_cmj_ov.empty:
