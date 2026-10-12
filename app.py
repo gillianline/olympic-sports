@@ -282,7 +282,48 @@ with testing_tab_intake:
     hud_col1, hud_col2 = st.columns([1.2, 1.8])
 
     with hud_col1:
-        hud_svg_html = """
+        # Dynamic Nodes based on data presence
+        node_1_svg = """
+        <!-- 1. Belt Squat (Core / Waist) -->
+        <line x1="68" y1="84" x2="112" y2="84" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="68" cy="84" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="112" y="76" width="16" height="16" rx="4" fill="#FF8200" />
+        <text x="120" y="88" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">1</text>
+        """ if not bs_ath.empty else ""
+        
+        node_2_svg = """
+        <!-- 2. Hip (AD/AB & IR/ER) -->
+        <line x1="58" y1="116" x2="24" y2="116" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="58" cy="116" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="8" y="108" width="16" height="16" rx="4" fill="#4895DB" />
+        <text x="16" y="120" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">2</text>
+        """ if not hip_ath.empty else ""
+        
+        node_3_svg = """
+        <!-- 3. Knee (Ext/Flex) -->
+        <line x1="64" y1="140" x2="112" y2="140" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="64" cy="140" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="112" y="132" width="16" height="16" rx="4" fill="#FF8200" />
+        <text x="120" y="144" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">3</text>
+        """ if not sh_ath.empty else ""
+        
+        node_4_svg = """
+        <!-- 4. Hamstring (NordBord) -->
+        <line x1="56" y1="155" x2="24" y2="155" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="56" cy="155" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="8" y="147" width="16" height="16" rx="4" fill="#4895DB" />
+        <text x="16" y="159" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">4</text>
+        """ if not nord_ath.empty else ""
+        
+        node_5_svg = """
+        <!-- 5. Ankle -->
+        <line x1="72" y1="178" x2="112" y2="178" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="72" cy="178" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="112" y="170" width="16" height="16" rx="4" fill="#FF8200" />
+        <text x="120" y="182" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">5</text>
+        """ if not calf_ath.empty else ""
+
+        hud_svg_html = f"""
         <div style="background:#FFFFFF; border-radius:16px; padding:16px; border:1px solid #E5E5E7; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
             <div style="color:#1D1D1F; font-weight:800; font-size:13px; letter-spacing:1px; text-transform:uppercase; border-bottom:2px solid #FF8200; padding-bottom:6px; margin-bottom:12px;">ANATOMY LOCATION MAP</div>
             <div style="position:relative; width:100%; height:460px; background:#FAFDFD; border-radius:12px; border:1px solid #D5E5E8; display:flex; align-items:center; justify-content:center; overflow:hidden;">
@@ -312,32 +353,11 @@ with testing_tab_intake:
                         <line x1="51" y1="116" x2="85" y2="116" stroke="#D32F2F" stroke-width="1.1" />
                         <line x1="55" y1="168" x2="81" y2="168" stroke="#D32F2F" stroke-width="1.1" />
                     </g>
-
-                    <!-- Nodes -->
-                    <line x1="68" y1="84" x2="112" y2="84" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-                    <circle cx="68" cy="84" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-                    <rect x="112" y="76" width="16" height="16" rx="4" fill="#FF8200" />
-                    <text x="120" y="88" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">1</text>
-                    
-                    <line x1="58" y1="116" x2="24" y2="116" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
-                    <circle cx="58" cy="116" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
-                    <rect x="8" y="108" width="16" height="16" rx="4" fill="#4895DB" />
-                    <text x="16" y="120" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">2</text>
-                    
-                    <line x1="64" y1="140" x2="112" y2="140" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-                    <circle cx="64" cy="140" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-                    <rect x="112" y="132" width="16" height="16" rx="4" fill="#FF8200" />
-                    <text x="120" y="144" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">3</text>
-                    
-                    <line x1="56" y1="155" x2="24" y2="155" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
-                    <circle cx="56" cy="155" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
-                    <rect x="8" y="147" width="16" height="16" rx="4" fill="#4895DB" />
-                    <text x="16" y="159" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">4</text>
-                    
-                    <line x1="72" y1="178" x2="112" y2="178" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-                    <circle cx="72" cy="178" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-                    <rect x="112" y="170" width="16" height="16" rx="4" fill="#FF8200" />
-                    <text x="120" y="182" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">5</text>
+                    {node_1_svg}
+                    {node_2_svg}
+                    {node_3_svg}
+                    {node_4_svg}
+                    {node_5_svg}
                 </svg>
             </div>
         </div>
@@ -516,120 +536,94 @@ with testing_tab_intake:
 
     st.divider()
 
-    st.markdown(f"### Intake Assessment Raw Logs for {selected_intake_athlete} ({season_label})")
+    if has_data:
+        st.markdown(f"### Intake Assessment Raw Logs for {selected_intake_athlete} ({season_label})")
 
-    def render_clean_log(df_sub, log_name):
-        if df_sub.empty:
-            st.info(f"No {log_name} records for {selected_intake_athlete} in {season_label}.")
-            return
-        
-        df_display = df_sub.copy()
-        
-        def get_movement(row):
-            pos = row.get('Position')
-            dir_ = row.get('Direction')
-            test = row.get('Test')
-            
-            has_pos = pd.notna(pos) and str(pos).strip() != ""
-            has_dir = pd.notna(dir_) and str(dir_).strip() != ""
-            
-            if has_pos and has_dir:
-                return f"{pos} - {dir_}"
-            elif has_pos:
-                return pos
-            elif has_dir:
-                return f"{test} - {dir_}"
-            else:
-                return test
+        def render_clean_log(df_sub, log_name):
+            df_display = df_sub.copy()
+            def get_movement(row):
+                pos = row.get('Position')
+                dir_ = row.get('Direction')
+                test = row.get('Test')
+                has_pos = pd.notna(pos) and str(pos).strip() != ""
+                has_dir = pd.notna(dir_) and str(dir_).strip() != ""
+                if has_pos and has_dir: return f"{pos} - {dir_}"
+                elif has_pos: return pos
+                elif has_dir: return f"{test} - {dir_}"
+                else: return test
 
-        df_display['Position'] = df_display.apply(get_movement, axis=1)
+            df_display['Position'] = df_display.apply(get_movement, axis=1)
 
-        target_cols = [
-            "Date", "Position", "L Max Force (N)", "R Max Force (N)", 
-            "Max Imbalance", "L Max Ratio", "R Max Ratio"
-        ]
-        
-        final_cols = [c for c in target_cols if c in df_display.columns]
-        df_final = df_display[final_cols].copy()
-        
-        df_final = df_final.replace(["N/A", "NaN", "nan", ""], pd.NA)
-        df_final = df_final.dropna(axis=1, how='all')
-        df_final = df_final.fillna("")
-        
-        st.markdown(render_vball_table(df_final), unsafe_allow_html=True)
+            target_cols = [
+                "Date", "Position", "L Max Force (N)", "R Max Force (N)", 
+                "Max Imbalance", "L Max Ratio", "R Max Ratio"
+            ]
+            final_cols = [c for c in target_cols if c in df_display.columns]
+            df_final = df_display[final_cols].copy()
+            df_final = df_final.replace(["N/A", "NaN", "nan", ""], pd.NA)
+            df_final = df_final.dropna(axis=1, how='all').fillna("")
+            st.markdown(render_vball_table(df_final), unsafe_allow_html=True)
 
-    with st.expander("Ankle Plantar Flexion Log", expanded=False):
-        calf_ath = ankle_data[ankle_data["Name"] == selected_intake_athlete].sort_values("Date") if not ankle_data.empty else pd.DataFrame()
-        render_clean_log(calf_ath, "Ankle Assessment")
+        if not calf_ath.empty:
+            with st.expander("Ankle Plantar Flexion Log", expanded=False):
+                render_clean_log(calf_ath, "Ankle Assessment")
 
-    with st.expander("Knee Extension / Flexion Log", expanded=False):
-        sh_ath = knee_data[knee_data["Name"] == selected_intake_athlete].sort_values("Date") if not knee_data.empty else pd.DataFrame()
-        render_clean_log(sh_ath, "Knee Assessment")
+        if not sh_ath.empty:
+            with st.expander("Knee Extension / Flexion Log", expanded=False):
+                render_clean_log(sh_ath, "Knee Assessment")
 
-    with st.expander("Hip AD/AB Log", expanded=False):
         hip_ad_ath = hip_ad_ab_data[hip_ad_ab_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_ad_ab_data.empty else pd.DataFrame()
-        render_clean_log(hip_ad_ath, "Hip AD/AB")
+        if not hip_ad_ath.empty:
+            with st.expander("Hip AD/AB Log", expanded=False):
+                render_clean_log(hip_ad_ath, "Hip AD/AB")
 
-    with st.expander("Hip IR/ER Log", expanded=False):
         hip_ir_ath = hip_ir_er_data[hip_ir_er_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_ir_er_data.empty else pd.DataFrame()
-        render_clean_log(hip_ir_ath, "Hip IR/ER")
-        
-    with st.expander("Shoulder Log", expanded=False):
+        if not hip_ir_ath.empty:
+            with st.expander("Hip IR/ER Log", expanded=False):
+                render_clean_log(hip_ir_ath, "Hip IR/ER")
+            
         shoulder_ath = shoulder_data[shoulder_data["Name"] == selected_intake_athlete].sort_values("Date") if not shoulder_data.empty else pd.DataFrame()
-        render_clean_log(shoulder_ath, "Shoulder")
+        if not shoulder_ath.empty:
+            with st.expander("Shoulder Log", expanded=False):
+                render_clean_log(shoulder_ath, "Shoulder")
 
-    with st.expander("Isometric Belt Squat Log", expanded=False):
-        bs_ath = belt_squat_data[belt_squat_data["Name"] == selected_intake_athlete].sort_values("Date") if not belt_squat_data.empty else pd.DataFrame()
-        
         if not bs_ath.empty:
-            target_cols_bs = [
-                "Test Type", "Date", "BW [KG]", "Peak Vertical Force [N]", 
-                "Peak Vertical Force / BM [N/kg]", "RFD - 100ms [N/s]", 
-                "Force at 100ms [N]", "Start Time to 80% Net Peak Force [s]"
-            ]
-            
-            final_cols_bs = [c for c in target_cols_bs if c in bs_ath.columns]
-            df_bs_display = bs_ath[final_cols_bs].copy()
-            
-            if "Date" in df_bs_display.columns:
-                df_bs_display["Date"] = pd.to_datetime(df_bs_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
-            
-            for col in df_bs_display.columns:
-                if col not in ["Test Type", "Date"]:
-                    df_bs_display[col] = pd.to_numeric(df_bs_display[col], errors="coerce").apply(
-                        lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
-                    )
-            
-            df_bs_display = df_bs_display.dropna(axis=1, how='all').fillna("-")
-            st.dataframe(df_bs_display, use_container_width=True, hide_index=True)
-        else:
-            st.info(f"No Isometric Belt Squat records for {selected_intake_athlete} in {season_label}.")
+            with st.expander("Isometric Belt Squat Log", expanded=False):
+                target_cols_bs = [
+                    "Test Type", "Date", "BW [KG]", "Peak Vertical Force [N]", 
+                    "Peak Vertical Force / BM [N/kg]", "RFD - 100ms [N/s]", 
+                    "Force at 100ms [N]", "Start Time to 80% Net Peak Force [s]"
+                ]
+                final_cols_bs = [c for c in target_cols_bs if c in bs_ath.columns]
+                df_bs_display = bs_ath[final_cols_bs].copy()
+                if "Date" in df_bs_display.columns:
+                    df_bs_display["Date"] = pd.to_datetime(df_bs_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                for col in df_bs_display.columns:
+                    if col not in ["Test Type", "Date"]:
+                        df_bs_display[col] = pd.to_numeric(df_bs_display[col], errors="coerce").apply(
+                            lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
+                        )
+                df_bs_display = df_bs_display.dropna(axis=1, how='all').fillna("-")
+                st.dataframe(df_bs_display, use_container_width=True, hide_index=True)
 
-    with st.expander("NordBord Hamstring Log", expanded=False):
-        nb_ath = nordic_data[nordic_data["Name"] == selected_intake_athlete].sort_values("Date") if not nordic_data.empty else pd.DataFrame()
-        
-        if not nb_ath.empty:
-            target_cols_nb = [
-                "Test", "Date", "L Max Force (N)", "R Max Force (N)", 
-                "Max Imbalance (%)", "L Max Torque (Nm)", "R Max Torque (Nm)"
-            ]
-            
-            final_cols_nb = [c for c in target_cols_nb if c in nb_ath.columns]
-            df_nb_display = nb_ath[final_cols_nb].copy()
-            
-            if "Date" in df_nb_display.columns:
-                df_nb_display["Date"] = pd.to_datetime(df_nb_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
-            
-            for col in df_nb_display.columns:
-                if col not in ["Test", "Date"]:
-                    df_nb_display[col] = pd.to_numeric(df_nb_display[col], errors="coerce").apply(
-                        lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
-                    )
-            
-            df_nb_display = df_nb_display.dropna(axis=1, how='all').fillna("-")
-            st.dataframe(df_nb_display, use_container_width=True, hide_index=True)
-        else:
-            st.info(f"No NordBord records for {selected_intake_athlete} in {season_label}.")
+        if not nord_ath.empty:
+            with st.expander("NordBord Hamstring Log", expanded=False):
+                target_cols_nb = [
+                    "Test", "Date", "L Max Force (N)", "R Max Force (N)", 
+                    "Max Imbalance (%)", "L Max Torque (Nm)", "R Max Torque (Nm)"
+                ]
+                final_cols_nb = [c for c in target_cols_nb if c in nord_ath.columns]
+                df_nb_display = nord_ath[final_cols_nb].copy()
+                if "Date" in df_nb_display.columns:
+                    df_nb_display["Date"] = pd.to_datetime(df_nb_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                for col in df_nb_display.columns:
+                    if col not in ["Test", "Date"]:
+                        df_nb_display[col] = pd.to_numeric(df_nb_display[col], errors="coerce").apply(
+                            lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
+                        )
+                df_nb_display = df_nb_display.dropna(axis=1, how='all').fillna("-")
+                st.dataframe(df_nb_display, use_container_width=True, hide_index=True)
+
 
 # ==========================================
 # SECTION 5B: CMJ TAB
@@ -786,7 +780,7 @@ with testing_tab_cmj:
 # ==========================================
 with testing_tab_wellness:
     st.markdown(
-        f'<div class="vball-section-title">Readiness & Wellness ({season_label})</div>',
+        f'<div class="vball-section-title">Neuromuscular Readiness & Wellness ({season_label})</div>',
         unsafe_allow_html=True,
     )
     
@@ -897,7 +891,6 @@ with testing_tab_wellness:
             cur_test_row = ath_cmj_all.loc[cur_idx_list[-1]]
             base_test_row = ath_cmj_all.iloc[0]
             
-            # Find the dynamic target column for Jump Height
             cmj_col = next((c for c in cmj_data.columns if "jump height" in c.lower() or "height" in c.lower()), "Jump Height")
 
             meta_lookup = filtered_roster[filtered_roster["Name"] == sel_cmj_ath]
