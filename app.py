@@ -50,9 +50,10 @@ def load_data():
     df_bs = pd.read_csv(st.secrets["sheet_belt_squat"])
     df_nb = pd.read_csv(st.secrets["sheet_nordbord"]) 
     df_dj = pd.read_csv(st.secrets["sheet_drop_jump"]) 
+    df_ash = pd.read_csv(st.secrets["sheet_ash"]) # New ASH data stream
     
     # Clean up column names: remove hidden spaces and fix capitalization
-    for df in [df_ff, df_roster, df_cmj, df_bs, df_nb, df_dj]:
+    for df in [df_ff, df_roster, df_cmj, df_bs, df_nb, df_dj, df_ash]:
         df.columns = df.columns.str.strip()
         
         # Bulletproof: Force any variation of "season" or "sport" to be capitalized correctly
@@ -79,11 +80,12 @@ def load_data():
     df_bs = smart_merge(df_bs, df_roster)
     df_nb = smart_merge(df_nb, df_roster)
     df_dj = smart_merge(df_dj, df_roster)
+    df_ash = smart_merge(df_ash, df_roster)
     
-    return df_ff, df_cmj, df_bs, df_nb, df_dj, df_roster
+    return df_ff, df_cmj, df_bs, df_nb, df_dj, df_ash, df_roster
 
 try:
-    df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_roster = load_data()
+    df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_ash_full, df_roster = load_data()
 except Exception as e:
     st.error("Error loading secure data. Please check your sheet links in secrets.toml.")
     st.stop()
@@ -97,7 +99,7 @@ st.markdown("---")
 
 # 1. Season Filter (Moved to Main Page)
 all_seasons = set()
-for df in [df_roster, df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full]:
+for df in [df_roster, df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_ash_full]:
     if 'Season' in df.columns:
         all_seasons.update(df['Season'].dropna().astype(str).unique().tolist())
 
@@ -141,6 +143,7 @@ filtered_cmj = df_cmj_full.copy()
 filtered_bs = df_bs_full.copy()
 filtered_nb = df_nb_full.copy()
 filtered_dj = df_dj_full.copy()
+filtered_ash = df_ash_full.copy()
 
 # Apply Season Filter Downstream
 if selected_season != "All Seasons":
@@ -149,6 +152,7 @@ if selected_season != "All Seasons":
     if 'Season' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Season'].astype(str) == selected_season]
     if 'Season' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Season'].astype(str) == selected_season]
     if 'Season' in filtered_dj.columns: filtered_dj = filtered_dj[filtered_dj['Season'].astype(str) == selected_season]
+    if 'Season' in filtered_ash.columns: filtered_ash = filtered_ash[filtered_ash['Season'].astype(str) == selected_season]
 
 # Apply Sport Filter Downstream
 if selected_sport != "All Sports":
@@ -157,6 +161,7 @@ if selected_sport != "All Sports":
     if 'Sport' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_dj.columns: filtered_dj = filtered_dj[filtered_dj['Sport'].astype(str) == selected_sport]
+    if 'Sport' in filtered_ash.columns: filtered_ash = filtered_ash[filtered_ash['Sport'].astype(str) == selected_sport]
 
 # Apply Player Filter Downstream
 if selected_player != "All Players":
@@ -165,6 +170,7 @@ if selected_player != "All Players":
     filtered_bs = filtered_bs[filtered_bs['Name'].astype(str) == selected_player]
     filtered_nb = filtered_nb[filtered_nb['Name'].astype(str) == selected_player]
     filtered_dj = filtered_dj[filtered_dj['Name'].astype(str) == selected_player]
+    filtered_ash = filtered_ash[filtered_ash['Name'].astype(str) == selected_player]
 
 # ==========================================
 # 4. HELPER FUNCTIONS
@@ -178,7 +184,7 @@ def format_date_clean(date_val):
         return str(date_val)
 
 def render_vball_table(df):
-    """Simple HTML table formatter to match your CSS classes"""
+    """Simple HTML table formatter to match CSS classes"""
     return df.to_html(classes="table table-striped", index=False, escape=False)
 
 
@@ -197,8 +203,6 @@ hip_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip', n
 hip_ad_ab_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip AD/AB', na=False, case=False)]
 hip_ir_er_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip IR/ER', na=False, case=False)]
 
-nordic_data = pd.DataFrame()
-
 # ---- BELT SQUAT DATA PREP ----
 if not filtered_bs.empty and 'Date' in filtered_bs.columns:
     filtered_bs['Date'] = pd.to_datetime(filtered_bs['Date'], errors='coerce')
@@ -215,6 +219,12 @@ if not filtered_dj.empty and 'Date' in filtered_dj.columns:
     filtered_dj['Date'] = pd.to_datetime(filtered_dj['Date'], errors='coerce')
     filtered_dj['Date_Str'] = filtered_dj['Date'].dt.strftime("%m/%d/%y")
 dj_data = filtered_dj.copy()
+
+# ---- ASH TEST DATA PREP ----
+if not filtered_ash.empty and 'Date' in filtered_ash.columns:
+    filtered_ash['Date'] = pd.to_datetime(filtered_ash['Date'], errors='coerce')
+    filtered_ash['Date_Str'] = filtered_ash['Date'].dt.strftime("%m/%d/%y")
+ash_data = filtered_ash.copy()
 
 # ---- NORDBORD DATA PREP ----
 if not filtered_nb.empty and 'Date' in filtered_nb.columns:
@@ -255,8 +265,10 @@ with testing_tab_intake:
     sh_ath = knee_data[knee_data["Name"] == selected_intake_athlete].sort_values("Date") if not knee_data.empty and "Name" in knee_data.columns else pd.DataFrame()
     nord_ath = nordic_data[nordic_data["Name"] == selected_intake_athlete].sort_values("Date") if not nordic_data.empty and "Name" in nordic_data.columns else pd.DataFrame()
     bs_ath = belt_squat_data[belt_squat_data["Name"] == selected_intake_athlete].sort_values("Date") if not belt_squat_data.empty and "Name" in belt_squat_data.columns else pd.DataFrame()
+    dj_ath_intake = dj_data[dj_data["Name"] == selected_intake_athlete].sort_values("Date") if not dj_data.empty and "Name" in dj_data.columns else pd.DataFrame()
+    ash_ath_intake = ash_data[ash_data["Name"] == selected_intake_athlete].sort_values("Date") if not ash_data.empty and "Name" in ash_data.columns else pd.DataFrame()
 
-    has_data = not (calf_ath.empty and hip_ath.empty and sh_ath.empty and nord_ath.empty and bs_ath.empty)
+    has_data = not (calf_ath.empty and hip_ath.empty and sh_ath.empty and nord_ath.empty and bs_ath.empty and dj_ath_intake.empty and ash_ath_intake.empty)
 
     def render_val_with_arrow(current, initial, fmt="{:.1f}", unit=""):
         if initial == 0 or pd.isna(initial) or pd.isna(current):
@@ -335,6 +347,22 @@ with testing_tab_intake:
         <text x="120" y="182" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">5</text>
         """ if not calf_ath.empty else ""
 
+        node_6_svg = """
+        <!-- 6. Shoulder (ASH Test) -->
+        <line x1="58" y1="50" x2="24" y2="50" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="58" cy="50" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="8" y="42" width="16" height="16" rx="4" fill="#4895DB" />
+        <text x="16" y="54" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">6</text>
+        """ if not ash_ath_intake.empty else ""
+
+        node_7_svg = """
+        <!-- 7. Drop Jump -->
+        <line x1="68" y1="200" x2="112" y2="200" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+        <circle cx="68" cy="200" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+        <rect x="112" y="192" width="16" height="16" rx="4" fill="#FF8200" />
+        <text x="120" y="204" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">7</text>
+        """ if not dj_ath_intake.empty else ""
+
         hud_svg_html = f"""
         <div style="background:#FFFFFF; border-radius:16px; padding:16px; border:1px solid #E5E5E7; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
             <div style="color:#1D1D1F; font-weight:800; font-size:13px; letter-spacing:1px; text-transform:uppercase; border-bottom:2px solid #FF8200; padding-bottom:6px; margin-bottom:12px;">ANATOMY LOCATION MAP</div>
@@ -370,6 +398,8 @@ with testing_tab_intake:
                     {node_3_svg}
                     {node_4_svg}
                     {node_5_svg}
+                    {node_6_svg}
+                    {node_7_svg}
                 </svg>
             </div>
         </div>
@@ -394,6 +424,28 @@ with testing_tab_intake:
         )
 
         if has_data:
+            # 6. ASH TEST (Matches Node 6 - Shoulders)
+            if not ash_ath_intake.empty:
+                l_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(l)" in c.lower()), None)
+                r_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(r)" in c.lower()), None)
+                (ash_maxL, ash_maxR), (ash_recL, ash_recR), _ = get_peak_and_recent_row(ash_ath_intake, l_col, r_col)
+                date_str = format_date_clean(ash_ath_intake.sort_values("Date").iloc[-1].get("Date"))
+
+                st.markdown(
+                    f"""
+                    <div class="hud-metric-row-light-blue">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">6</span>ATHLETIC SHOULDER (ASH)</span>
+                            <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+                        </div>
+                        <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
+                            <b>Peak Force:</b> Max L {ash_maxL:.1f}N | R {ash_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ash_recL, ash_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ash_recR, ash_maxR, '{:.1f}', 'N')}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
             # 1. BELT SQUAT (Matches Node 1 - Core/Waist)
             if not bs_ath.empty:
                 f_c = next((c for c in bs_ath.columns if "peak vertical force" in c.lower() or "force" in c.lower()), None)
@@ -541,6 +593,35 @@ with testing_tab_intake:
                     unsafe_allow_html=True,
                 )
 
+            # 7. DROP JUMP (Matches Node 7 - Feet/Ground)
+            if not dj_ath_intake.empty:
+                dj_jh_col = next((c for c in dj_ath_intake.columns if "jump height" in c.lower()), None)
+                dj_rsi_col = next((c for c in dj_ath_intake.columns if "rsi" in c.lower()), None)
+                
+                dj_jh_max = pd.to_numeric(dj_ath_intake[dj_jh_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce").max() if dj_jh_col else 0
+                dj_jh_rec = pd.to_numeric(dj_ath_intake.sort_values("Date").iloc[-1].get(dj_jh_col, 0), errors="coerce") if dj_jh_col else 0
+                
+                dj_rsi_max = pd.to_numeric(dj_ath_intake[dj_rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce").max() if dj_rsi_col else 0
+                dj_rsi_rec = pd.to_numeric(dj_ath_intake.sort_values("Date").iloc[-1].get(dj_rsi_col, 0), errors="coerce") if dj_rsi_col else 0
+
+                date_str = format_date_clean(dj_ath_intake.sort_values("Date").iloc[-1].get("Date"))
+
+                st.markdown(
+                    f"""
+                    <div class="hud-metric-row-light">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-orange">7</span>DROP JUMP</span>
+                            <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+                        </div>
+                        <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
+                            <b>Jump Height:</b> Max {dj_jh_max:.1f}cm &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(dj_jh_rec, dj_jh_max, '{:.1f}', 'cm')}<br>
+                            <b>RSI:</b> Max {dj_rsi_max:.2f} &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(dj_rsi_rec, dj_rsi_max, '{:.2f}', '')}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
         else:
             st.info(f"No Intake Assessment records found for {selected_intake_athlete} in {season_label}.")
 
@@ -575,6 +656,23 @@ with testing_tab_intake:
             df_final = df_final.replace(["N/A", "NaN", "nan", ""], pd.NA)
             df_final = df_final.dropna(axis=1, how='all').fillna("")
             st.markdown(render_vball_table(df_final), unsafe_allow_html=True)
+
+        if not ash_ath_intake.empty:
+            with st.expander("Athletic Shoulder (ASH) Log", expanded=False):
+                target_cols_ash = [
+                    "Date", "Test Type", "Isometric Type", "Position", 
+                    "Peak Vertical Force [N] (L)", "Peak Vertical Force [N] (R)", 
+                    "Peak Vertical Force [N] (Asym)(%)"
+                ]
+                final_cols_ash = [c for c in target_cols_ash if c in ash_ath_intake.columns]
+                df_ash_display = ash_ath_intake[final_cols_ash].copy()
+                if "Date" in df_ash_display.columns:
+                    df_ash_display["Date"] = pd.to_datetime(df_ash_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                for col in df_ash_display.columns:
+                    if "Force" in col or "Asym" in col:
+                        df_ash_display[col] = pd.to_numeric(df_ash_display[col], errors="coerce").apply(lambda x: f"{x:.1f}" if pd.notna(x) else pd.NA)
+                df_ash_display = df_ash_display.dropna(axis=1, how='all').fillna("-")
+                st.dataframe(df_ash_display, use_container_width=True, hide_index=True)
 
         if not calf_ath.empty:
             with st.expander("Ankle Plantar Flexion Log", expanded=False):
@@ -635,6 +733,33 @@ with testing_tab_intake:
                         )
                 df_nb_display = df_nb_display.dropna(axis=1, how='all').fillna("-")
                 st.dataframe(df_nb_display, use_container_width=True, hide_index=True)
+                
+        if not dj_ath_intake.empty:
+            with st.expander("Drop Jump Log", expanded=False):
+                target_cols_dj = ["Test Type", "Date", "BW [KG]", "Drop Height [cm]"]
+                dj_rsi_col = next((c for c in dj_ath_intake.columns if "rsi" in c.lower()), None)
+                dj_jh_col = next((c for c in dj_ath_intake.columns if "jump height" in c.lower()), None)
+                if dj_rsi_col: target_cols_dj.append(dj_rsi_col)
+                if dj_jh_col: target_cols_dj.append(dj_jh_col)
+                target_cols_dj.extend(["Contact Time [s]", "Effective Drop [cm]"])
+                
+                final_cols_dj = [c for c in target_cols_dj if c in dj_ath_intake.columns]
+                df_dj_display = dj_ath_intake[final_cols_dj].copy()
+                
+                rename_map_dj = {}
+                if dj_jh_col: rename_map_dj[dj_jh_col] = "Jump Height (cm)"
+                if dj_rsi_col: rename_map_dj[dj_rsi_col] = "RSI [m/s]"
+                df_dj_display = df_dj_display.rename(columns=rename_map_dj)
+                
+                if "Date" in df_dj_display.columns:
+                    df_dj_display["Date"] = pd.to_datetime(df_dj_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+
+                for col in df_dj_display.columns:
+                    if col not in ["Test Type", "Date"]:
+                        df_dj_display[col] = pd.to_numeric(df_dj_display[col], errors="coerce").apply(lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA)
+                
+                df_dj_display = df_dj_display.dropna(axis=1, how='all').fillna("-")
+                st.dataframe(df_dj_display, use_container_width=True, hide_index=True)
 
 
 # ==========================================
@@ -725,7 +850,6 @@ with testing_tab_cmj:
         st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")       
 
     # --- DROP JUMP SECTION ---
-    st.divider()
     p_dj = (
         dj_data[dj_data["Name"] == selected_player_t]
         .sort_values("Date")
@@ -735,6 +859,7 @@ with testing_tab_cmj:
     )
     
     if not p_dj.empty:
+        st.divider()
         st.markdown(f"#### Drop Jump Performance History")
         
         dj_jh_col = next((c for c in p_dj.columns if "jump height" in c.lower()), None)
@@ -791,8 +916,6 @@ with testing_tab_cmj:
         
         df_dj_display = df_dj_display.dropna(axis=1, how='all').fillna("-")
         st.dataframe(df_dj_display, use_container_width=True, hide_index=True)
-    else:
-        st.info(f"No Drop Jump logs found for {selected_player_t} in {season_label}.")       
 
 
 # ==========================================
@@ -1265,6 +1388,23 @@ with testing_tab_overall:
             return f"{l_str} / {r_str}", format_date_clean(best_row.get("Date"))
         else:
             return None, None
+
+    p_ash_ov = ash_data[ash_data["Name"] == selected_ov_athlete] if not ash_data.empty and "Name" in ash_data.columns else pd.DataFrame()
+    if not p_ash_ov.empty:
+        l_col = next((c for c in p_ash_ov.columns if "force" in c.lower() and "(l)" in c.lower()), None)
+        r_col = next((c for c in p_ash_ov.columns if "force" in c.lower() and "(r)" in c.lower()), None)
+        if l_col and r_col:
+            p_ash_ov["Peak_Val"] = p_ash_ov[[l_col, r_col]].apply(pd.to_numeric, errors="coerce").max(axis=1)
+            valid_ash = p_ash_ov.dropna(subset=["Peak_Val"])
+            if not valid_ash.empty:
+                best_ash = valid_ash.sort_values("Peak_Val", ascending=False).iloc[0]
+                l_val = pd.to_numeric(best_ash[l_col], errors="coerce")
+                r_val = pd.to_numeric(best_ash[r_col], errors="coerce")
+                records.append({
+                    "Category": "Athletic Shoulder (ASH) Test (L/R)",
+                    "Best Test Value": f"{l_val:.1f} N / {r_val:.1f} N",
+                    "Date Achieved": format_date_clean(best_ash.get("Date"))
+                })
 
     p_cmj_ov = cmj_data[cmj_data["Name"] == selected_ov_athlete] if not cmj_data.empty and "Name" in cmj_data.columns else pd.DataFrame()
     if not p_cmj_ov.empty:
