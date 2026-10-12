@@ -901,7 +901,7 @@ with testing_tab_wellness:
             cmj_col = next((c for c in cmj_data.columns if "jump height" in c.lower() or "height" in c.lower()), "Jump Height")
 
             meta_lookup = filtered_roster[filtered_roster["Name"] == sel_cmj_ath]
-            photo_val = meta_lookup["PhotoURL"].iloc[0] if not meta_lookup.empty and "PhotoURL" in meta_lookup.columns else "https://www.w3schools.com/howto/img_avatar.png"
+            photo_val = meta_lookup["Picture"].iloc[0] if not meta_lookup.empty and "Picture" in meta_lookup.columns else "https://www.w3schools.com/howto/img_avatar.png"
             pos_val = meta_lookup["Position"].iloc[0] if not meta_lookup.empty and "Position" in meta_lookup.columns else "N/A"
 
             cmj_metric_defs = [
@@ -1165,7 +1165,7 @@ with testing_tab_wellness:
 
                 meta_row = filtered_roster[filtered_roster["Name"] == ath_name]
                 pos_str = meta_row["Position"].iloc[0] if not meta_row.empty and "Position" in meta_row.columns else "N/A"
-                photo_url = meta_row["PhotoURL"].iloc[0] if not meta_row.empty and "PhotoURL" in meta_row.columns else "https://www.w3schools.com/howto/img_avatar.png"
+                photo_url = meta_row["Picture"].iloc[0] if not meta_row.empty and "Picture" in meta_row.columns else "https://www.w3schools.com/howto/img_avatar.png"
                 
                 if team_pos_f != "All Positions" and pos_str != team_pos_f:
                     continue
@@ -1179,7 +1179,7 @@ with testing_tab_wellness:
                 
                 team_cmj_rows.append({
                     "Athlete": ath_name,
-                    "PhotoURL": photo_url,
+                    "Picture": photo_url,
                     "Position": pos_str,
                     "Readiness %": readiness_pct,
                     "Status_Color": z_color,
@@ -1200,7 +1200,7 @@ with testing_tab_wellness:
                 team_tbl_html = """<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px;"><thead><tr style="background:#4895DB; color:white;"><th style="width:60px;">Athlete</th><th style="text-align:left !important; padding-left:15px;">Name</th><th>Position</th><th>Wellness Score</th></tr></thead><tbody>"""
                 for _, row in cmj_team_df.iterrows():
                     team_tbl_html += f"""<tr>
-                        <td style="padding:6px;"><img src="{row['PhotoURL']}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
+                        <td style="padding:6px;"><img src="{row['Picture']}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
                         <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px;">{row['Athlete']}</td>
                         <td style="font-weight:600; color:#4B5563;">{row['Position']}</td>
                         <td style="font-weight:900; font-size:15px; color:{row['Status_Color']};">{row['Readiness %']}%</td>
