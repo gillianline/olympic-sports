@@ -1327,6 +1327,20 @@ with testing_tab_wellness:
                 team_pos_f = st.selectbox("Filter by Position", ["All Positions"] + sorted(positions), key="team_cmj_pos_filter")
 
             team_cmj_rows = []
+            
+            # Helper to pull the right column dynamically based on keywords
+            def get_metric_val(row, columns, keys, fmt="{:.2f}"):
+                col = next((c for c in columns if any(k in c.lower() for k in keys)), None)
+                if col and pd.notna(row.get(col)):
+                    # Remove non-numeric characters (except period and minus)
+                    try:
+                        clean_val = pd.to_numeric(str(row[col]).replace(r"[^0-9.-]", ""), errors="coerce")
+                        if pd.notna(clean_val):
+                            return fmt.format(clean_val)
+                    except:
+                        return str(row[col])
+                return "-"
+
             for ath_name in sorted(cmj_data["Name"].unique()):
                 ath_sub_cmj = cmj_data[cmj_data["Name"] == ath_name].sort_values("Date")
                 if ath_sub_cmj.empty:
@@ -1343,6 +1357,16 @@ with testing_tab_wellness:
                 if ath_date_match.empty:
                     continue
 
+                latest_test_row = ath_date_match.iloc[-1]
+                cols = ath_sub_cmj.columns
+
+                # Extract the 5 wellness metrics
+                val_rsi = get_metric_val(latest_test_row, cols, ["rsi-modified", "rsi"], "{:.2f}")
+                val_ecc_rfd = get_metric_val(latest_test_row, cols, ["eccentric braking rfd"], "{:.0f}")
+                val_f0v = get_metric_val(latest_test_row, cols, ["force at zero velocity", "force @ 0 velo"], "{:.0f}")
+                val_tt = get_metric_val(latest_test_row, cols, ["time to takeoff", "contraction time"], "{:.0f}")
+                val_p2p1 = get_metric_val(latest_test_row, cols, ["p2 concentric impulse:p1", "p2:p1"], "{:.2f}")
+
                 readiness_pct = int(round(calc_wellness_for_date(ath_sub_cmj, sel_team_cmj_date)))
                 z_color = get_readiness_color(readiness_pct)
                 
@@ -1352,6 +1376,11 @@ with testing_tab_wellness:
                     "Position": pos_str,
                     "Readiness %": readiness_pct,
                     "Status_Color": z_color,
+                    "RSI": val_rsi,
+                    "Ecc_RFD": val_ecc_rfd,
+                    "F0V": val_f0v,
+                    "Time_Takeoff": val_tt,
+                    "P2P1": val_p2p1
                 })
 
             if team_cmj_rows:
@@ -1366,19 +1395,39 @@ with testing_tab_wellness:
                 c_kpi3.metric("Optimal (>=90%)", peak_count)
                 c_kpi4.metric("Fatigued (<80%)", fatigue_count)
 
-                team_tbl_html = """<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px;"><thead><tr style="background:#4895DB; color:white;"><th style="width:60px;">Athlete</th><th style="text-align:left !important; padding-left:15px;">Name</th><th>Position</th><th>Wellness Score</th></tr></thead><tbody>"""
+                # Upgraded table with the 5 appended metrics
+                team_tbl_html = """<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px;">
+                <thead>
+                    <tr style="background:#4895DB; color:white;">
+                        <th style="width:50px; padding:8px;">Athlete</th>
+                        <th style="text-align:left !important; padding-left:15px;">Name</th>
+                        <th>Position</th>
+                        <th style="background:#1E40AF;">Wellness Score</th>
+                        <th>RSI-Mod [m/s]</th>
+                        <th>Ecc Braking RFD [N/s]</th>
+                        <th>Force @ 0 Velo [N]</th>
+                        <th>Time to Takeoff [ms]</th>
+                        <th>P2:P1 Ratio</th>
+                    </tr>
+                </thead><tbody>"""
+                
                 for _, row in cmj_team_df.iterrows():
-                    team_tbl_html += f"""<tr>
+                    team_tbl_html += f"""<tr style="border-bottom: 1px solid #E2E8F0;">
                         <td style="padding:6px;"><img src="{row['Picture']}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
                         <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px;">{row['Athlete']}</td>
-                        <td style="font-weight:600; color:#4B5563;">{row['Position']}</td>
-                        <td style="font-weight:900; font-size:15px; color:{row['Status_Color']};">{row['Readiness %']}%</td>
+                        <td style="font-weight:600; color:#64748B;">{row['Position']}</td>
+                        <td style="font-weight:900; font-size:15px; color:{row['Status_Color']}; background:#F8FAFC;">{row['Readiness %']}%</td>
+                        <td style="font-weight:700; color:#1D1D1F;">{row['RSI']}</td>
+                        <td style="font-weight:700; color:#1D1D1F;">{row['Ecc_RFD']}</td>
+                        <td style="font-weight:700; color:#1D1D1F;">{row['F0V']}</td>
+                        <td style="font-weight:700; color:#1D1D1F;">{row['Time_Takeoff']}</td>
+                        <td style="font-weight:700; color:#1D1D1F;">{row['P2P1']}</td>
                     </tr>"""
                 team_tbl_html += "</tbody></table>"
                 st.markdown(team_tbl_html, unsafe_allow_html=True)
             else:
                 st.info(f"No Countermovement Jump testing records logged on {sel_team_cmj_date}.")
-
+                
 
 # ==========================================
 # SECTION 5D: OVERALL PROFILE
