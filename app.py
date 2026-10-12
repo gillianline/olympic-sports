@@ -944,35 +944,53 @@ with testing_tab_wellness:
     
     # Helpers for the Wellness Score
     def calc_wellness_for_date(ath_cmj_df, target_date_str):
-        df_s = ath_cmj_df.sort_values("Date")
-        j_c = next((c for c in df_s.columns if "jump" in c.lower() or "height" in c.lower()), None)
-        r_c = next((c for c in df_s.columns if "rsi" in c.lower()), None)
+        df_s = ath_cmj_df.sort_values("Date").copy()
         
-        if not j_c: return 0
-        df_s["JH_Clean"] = pd.to_numeric(df_s[j_c].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
-        if r_c: df_s["RSI_Clean"] = pd.to_numeric(df_s[r_c].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
-        
-        valid_j = df_s.dropna(subset=["JH_Clean"])
-        if valid_j.empty: return 0
-        
-        max_j = valid_j["JH_Clean"].max()
-        target_df = valid_j[valid_j["Date_Str"] == target_date_str]
+        target_df = df_s[df_s["Date_Str"] == target_date_str]
         if target_df.empty: return 0
         
-        latest_j = target_df.iloc[-1]["JH_Clean"]
-        j_score = (latest_j / max_j * 100) if max_j > 0 else 0
+        # Define the target metrics and their optimization direction (higher_better = True means a higher value is better)
+        wellness_metrics = [
+            {"keys": ["rsi-modified", "rsi"], "higher_better": True},
+            {"keys": ["eccentric braking rfd"], "higher_better": True},
+            {"keys": ["force at zero velocity", "force @ 0 velo"], "higher_better": True},
+            {"keys": ["time to takeoff", "contraction time"], "higher_better": False},
+            {"keys": ["p2 concentric impulse:p1 concentric", "p2:p1"], "higher_better": True}
+        ]
         
-        if r_c:
-            valid_r = df_s.dropna(subset=["RSI_Clean"])
-            if not valid_r.empty:
-                max_r = valid_r["RSI_Clean"].max()
-                target_r = valid_r[valid_r["Date_Str"] == target_date_str]
-                if not target_r.empty:
-                    latest_r = target_r.iloc[-1]["RSI_Clean"]
-                    r_score = (latest_r / max_r * 100) if max_r > 0 else 0
-                    if r_score > 0:
-                        return (j_score + r_score) / 2
-        return j_score
+        scores = []
+        
+        for m in wellness_metrics:
+            # Find the matching column dynamically
+            col = next((c for c in df_s.columns if any(k in c.lower() for k in m["keys"])), None)
+            if not col: continue
+            
+            # Clean and format the column
+            df_s[f"{col}_Clean"] = pd.to_numeric(df_s[col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+            valid_data = df_s.dropna(subset=[f"{col}_Clean"])
+            
+            if valid_data.empty: continue
+            
+            # Fetch latest value for this athlete specifically on the target date
+            latest_row = valid_data[valid_data["Date_Str"] == target_date_str]
+            if latest_row.empty: continue
+            
+            latest_val = latest_row.iloc[-1][f"{col}_Clean"]
+            if pd.isna(latest_val) or latest_val <= 0: continue
+            
+            # Calculate % score based on direction 
+            if m["higher_better"]:
+                max_val = valid_data[f"{col}_Clean"].max()
+                if max_val > 0:
+                    scores.append((latest_val / max_val) * 100)
+            else:
+                min_val = valid_data[f"{col}_Clean"].min()
+                if min_val > 0:
+                    scores.append((min_val / latest_val) * 100)
+                    
+        if scores:
+            return sum(scores) / len(scores)
+        return 0
 
     def get_readiness_color(val):
         if val >= 90: return "#28a745" # Green
