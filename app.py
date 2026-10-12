@@ -231,7 +231,7 @@ roster_players = filtered_roster['Name'].dropna().unique().tolist()
 # ==========================================
 
 testing_tab_intake, testing_tab_cmj, testing_tab_wellness, testing_tab_overall = st.tabs(
-    ["Intake Assessment", "Jump Testing", "Wellness Jump", "Overall Profile"]
+    ["Intake Assessment", "Jump Testing", "Wellness Score", "Overall Profile"]
 )
 
 # ==========================================
@@ -800,7 +800,7 @@ with testing_tab_cmj:
 # ==========================================
 with testing_tab_wellness:
     st.markdown(
-        f'<div class="vball-section-title">Neuromuscular Readiness & Wellness ({season_label})</div>',
+        f'<div class="vball-section-title">Readiness & Wellness ({season_label})</div>',
         unsafe_allow_html=True,
     )
     
