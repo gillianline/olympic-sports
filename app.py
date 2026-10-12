@@ -1328,18 +1328,14 @@ with testing_tab_wellness:
 
             team_cmj_rows = []
             
-            # Helper to pull the right column dynamically based on keywords
-            def get_metric_val(row, columns, keys, fmt="{:.2f}"):
-                col = next((c for c in columns if any(k in c.lower() for k in keys)), None)
-                if col and pd.notna(row.get(col)):
-                    # Remove non-numeric characters (except period and minus)
-                    try:
-                        clean_val = pd.to_numeric(str(row[col]).replace(r"[^0-9.-]", ""), errors="coerce")
-                        if pd.notna(clean_val):
-                            return fmt.format(clean_val)
-                    except:
-                        return str(row[col])
-                return "-"
+            # Map metrics with fuzzy keys and define inversion rule (lower is better = True)
+            wellness_metrics_ref = [
+                {"label": "mRSI", "keys": ["rsi-modified", "rsi"], "invert": False},
+                {"label": "ECC_RFD", "keys": ["eccentric braking rfd"], "invert": False},
+                {"label": "F0V", "keys": ["force at zero velocity", "force @ 0 velo"], "invert": False},
+                {"label": "TTO", "keys": ["time to takeoff", "contraction time"], "invert": True},
+                {"label": "P2P1", "keys": ["p2 concentric impulse:p1", "p2:p1"], "invert": True}
+            ]
 
             for ath_name in sorted(cmj_data["Name"].unique()):
                 ath_sub_cmj = cmj_data[cmj_data["Name"] == ath_name].sort_values("Date")
@@ -1357,30 +1353,72 @@ with testing_tab_wellness:
                 if ath_date_match.empty:
                     continue
 
-                latest_test_row = ath_date_match.iloc[-1]
+                target_row = ath_date_match.iloc[-1]
                 cols = ath_sub_cmj.columns
 
-                # Extract the 5 wellness metrics
-                val_rsi = get_metric_val(latest_test_row, cols, ["rsi-modified", "rsi"], "{:.2f}")
-                val_ecc_rfd = get_metric_val(latest_test_row, cols, ["eccentric braking rfd"], "{:.0f}")
-                val_f0v = get_metric_val(latest_test_row, cols, ["force at zero velocity", "force @ 0 velo"], "{:.0f}")
-                val_tt = get_metric_val(latest_test_row, cols, ["time to takeoff", "contraction time"], "{:.0f}")
-                val_p2p1 = get_metric_val(latest_test_row, cols, ["p2 concentric impulse:p1", "p2:p1"], "{:.2f}")
+                # Find the previous row for percentage comparison
+                all_indices = list(ath_sub_cmj.index)
+                if target_row.name in all_indices:
+                    cur_pos = all_indices.index(target_row.name)
+                    prev_row = ath_sub_cmj.iloc[max(0, cur_pos - 1)]
+                else:
+                    prev_row = target_row
+                
+                indiv_scores = {}
+                sub_scores = []
 
-                readiness_pct = int(round(calc_wellness_for_date(ath_sub_cmj, sel_team_cmj_date)))
+                for rm in wellness_metrics_ref:
+                    # Fuzzy match the column name
+                    c_name = next((c for c in cols if any(k in c.lower() for k in rm["keys"])), None)
+                    lbl = rm["label"]
+                    
+                    if c_name and c_name in target_row and c_name in prev_row:
+                        try:
+                            # Strip any text strings (like [m/s]) and convert to float
+                            t_val = abs(float(pd.to_numeric(str(target_row.get(c_name, 0.0)).replace(r"[^0-9.-]", ""), errors="coerce")))
+                            s_val = abs(float(pd.to_numeric(str(prev_row.get(c_name, 0.0)).replace(r"[^0-9.-]", ""), errors="coerce")))
+                            
+                            if s_val > 0 and t_val > 0:
+                                pct_diff = ((t_val - s_val) / s_val) * 100.0
+                                score = (100.0 - pct_diff) if rm["invert"] else (100.0 + pct_diff)
+                                score = max(0.0, min(100.0, score))
+                                indiv_scores[lbl] = score
+                                sub_scores.append(score)
+                            else:
+                                indiv_scores[lbl] = None
+                        except Exception:
+                            indiv_scores[lbl] = None
+                    else:
+                        indiv_scores[lbl] = None
+
+                readiness_pct = int(round(sum(sub_scores) / len(sub_scores))) if sub_scores else 100
                 z_color = get_readiness_color(readiness_pct)
                 
+                def format_pct(val):
+                    return f"{int(round(val))}%" if val is not None else "-"
+                    
+                def get_pct_color(val):
+                    if val is None: return "#1D1D1F"
+                    if val >= 90: return "#15803D"
+                    if val >= 80: return "#D97706"
+                    return "#B91C1C"
+
                 team_cmj_rows.append({
                     "Athlete": ath_name,
                     "Picture": photo_url,
                     "Position": pos_str,
                     "Readiness %": readiness_pct,
                     "Status_Color": z_color,
-                    "RSI": val_rsi,
-                    "Ecc_RFD": val_ecc_rfd,
-                    "F0V": val_f0v,
-                    "Time_Takeoff": val_tt,
-                    "P2P1": val_p2p1
+                    "mRSI": format_pct(indiv_scores.get("mRSI")),
+                    "mRSI_c": get_pct_color(indiv_scores.get("mRSI")),
+                    "Ecc_RFD": format_pct(indiv_scores.get("ECC_RFD")),
+                    "Ecc_RFD_c": get_pct_color(indiv_scores.get("ECC_RFD")),
+                    "F0V": format_pct(indiv_scores.get("F0V")),
+                    "F0V_c": get_pct_color(indiv_scores.get("F0V")),
+                    "Time_Takeoff": format_pct(indiv_scores.get("TTO")),
+                    "TTO_c": get_pct_color(indiv_scores.get("TTO")),
+                    "P2P1": format_pct(indiv_scores.get("P2P1")),
+                    "P2P1_c": get_pct_color(indiv_scores.get("P2P1"))
                 })
 
             if team_cmj_rows:
@@ -1395,33 +1433,40 @@ with testing_tab_wellness:
                 c_kpi3.metric("Optimal (>=90%)", peak_count)
                 c_kpi4.metric("Fatigued (<80%)", fatigue_count)
 
-                # Upgraded table with the 5 appended metrics
+                # Upgraded table with the 5 appended metrics and updated coloring
                 team_tbl_html = """<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px;">
                 <thead>
-                    <tr style="background:#4895DB; color:white;">
-                        <th style="width:50px; padding:8px;">Athlete</th>
+                    <tr style="background:#FF8200; color:white;">
+                        <th style="width:50px; padding:8px;">Photo</th>
                         <th style="text-align:left !important; padding-left:15px;">Name</th>
                         <th>Position</th>
-                        <th style="background:#1E40AF;">Wellness Score</th>
-                        <th>RSI-Mod [m/s]</th>
-                        <th>Ecc Braking RFD [N/s]</th>
-                        <th>Force @ 0 Velo [N]</th>
-                        <th>Time to Takeoff [ms]</th>
+                        <th style="background:#82C6E2; color:#0F172A;">Wellness Score</th>
+                        <th>Readiness Status</th>
+                        <th>RSI-Mod</th>
+                        <th>Ecc Braking RFD</th>
+                        <th>Force @ 0 Velo</th>
+                        <th>Time to Takeoff</th>
                         <th>P2:P1 Ratio</th>
                     </tr>
                 </thead><tbody>"""
                 
                 for _, row in cmj_team_df.iterrows():
+                    r_val = row["Readiness %"]
+                    status_text = "Optimal Readiness" if r_val >= 90 else ("Moderate Fatigue" if r_val >= 80 else "High Fatigue Risk")
+                    badge_bg = "#DCFCE7" if r_val >= 90 else ("#FEF3C7" if r_val >= 80 else "#FEE2E2")
+                    badge_fg = "#15803D" if r_val >= 90 else ("#B45309" if r_val >= 80 else "#B91C1C")
+
                     team_tbl_html += f"""<tr style="border-bottom: 1px solid #E2E8F0;">
                         <td style="padding:6px;"><img src="{row['Picture']}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
-                        <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px;">{row['Athlete']}</td>
+                        <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{row['Athlete']}</td>
                         <td style="font-weight:600; color:#64748B;">{row['Position']}</td>
                         <td style="font-weight:900; font-size:15px; color:{row['Status_Color']}; background:#F8FAFC;">{row['Readiness %']}%</td>
-                        <td style="font-weight:700; color:#1D1D1F;">{row['RSI']}</td>
-                        <td style="font-weight:700; color:#1D1D1F;">{row['Ecc_RFD']}</td>
-                        <td style="font-weight:700; color:#1D1D1F;">{row['F0V']}</td>
-                        <td style="font-weight:700; color:#1D1D1F;">{row['Time_Takeoff']}</td>
-                        <td style="font-weight:700; color:#1D1D1F;">{row['P2P1']}</td>
+                        <td><span style="background-color:{badge_bg}; color:{badge_fg}; padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.75rem; white-space:nowrap;">{status_text}</span></td>
+                        <td style="font-weight:800; color:{row['mRSI_c']};">{row['mRSI']}</td>
+                        <td style="font-weight:800; color:{row['Ecc_RFD_c']};">{row['Ecc_RFD']}</td>
+                        <td style="font-weight:800; color:{row['F0V_c']};">{row['F0V']}</td>
+                        <td style="font-weight:800; color:{row['TTO_c']};">{row['Time_Takeoff']}</td>
+                        <td style="font-weight:800; color:{row['P2P1_c']};">{row['P2P1']}</td>
                     </tr>"""
                 team_tbl_html += "</tbody></table>"
                 st.markdown(team_tbl_html, unsafe_allow_html=True)
