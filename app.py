@@ -945,53 +945,52 @@ with testing_tab_wellness:
     # Helpers for the Wellness Score
     def calc_wellness_for_date(ath_cmj_df, target_date_str):
         df_s = ath_cmj_df.sort_values("Date").copy()
-        
+
         target_df = df_s[df_s["Date_Str"] == target_date_str]
         if target_df.empty: return 0
-        
-        # Define the target metrics and their optimization direction (higher_better = True means a higher value is better)
-        wellness_metrics = [
-            {"keys": ["rsi-modified", "rsi"], "higher_better": True},
-            {"keys": ["eccentric braking rfd"], "higher_better": True},
-            {"keys": ["force at zero velocity", "force @ 0 velo"], "higher_better": True},
-            {"keys": ["time to takeoff", "contraction time"], "higher_better": False},
-            {"keys": ["p2 concentric impulse:p1 concentric", "p2:p1"], "higher_better": True}
-        ]
-        
-        scores = []
-        
-        for m in wellness_metrics:
-            # Find the matching column dynamically
-            col = next((c for c in df_s.columns if any(k in c.lower() for k in m["keys"])), None)
-            if not col: continue
-            
-            # Clean and format the column
-            df_s[f"{col}_Clean"] = pd.to_numeric(df_s[col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
-            valid_data = df_s.dropna(subset=[f"{col}_Clean"])
-            
-            if valid_data.empty: continue
-            
-            # Fetch latest value for this athlete specifically on the target date
-            latest_row = valid_data[valid_data["Date_Str"] == target_date_str]
-            if latest_row.empty: continue
-            
-            latest_val = latest_row.iloc[-1][f"{col}_Clean"]
-            if pd.isna(latest_val) or latest_val <= 0: continue
-            
-            # Calculate % score based on direction 
-            if m["higher_better"]:
-                max_val = valid_data[f"{col}_Clean"].max()
-                if max_val > 0:
-                    scores.append((latest_val / max_val) * 100)
-            else:
-                min_val = valid_data[f"{col}_Clean"].min()
-                if min_val > 0:
-                    scores.append((min_val / latest_val) * 100)
-                    
-        if scores:
-            return sum(scores) / len(scores)
-        return 0
 
+        target_row = target_df.iloc[-1]
+        cols = df_s.columns
+
+        # Find the previous row for percentage comparison (matching Team Summary)
+        all_indices = list(df_s.index)
+        if target_row.name in all_indices:
+            cur_pos = all_indices.index(target_row.name)
+            prev_row = df_s.iloc[max(0, cur_pos - 1)]
+        else:
+            prev_row = target_row
+
+        # Define the exact same metrics and inversion rules as the Team Summary
+        wellness_metrics_ref = [
+            {"label": "mRSI", "keys": ["rsi-modified", "rsi"], "invert": False},
+            {"label": "ECC_RFD", "keys": ["eccentric braking rfd"], "invert": False},
+            {"label": "F0V", "keys": ["force at zero velocity", "force @ 0 velo"], "invert": False},
+            {"label": "TTO", "keys": ["time to takeoff", "contraction time"], "invert": True},
+            {"label": "P2P1", "keys": ["p2 concentric impulse:p1", "p2:p1"], "invert": True}
+        ]
+
+        sub_scores = []
+
+        for rm in wellness_metrics_ref:
+            c_name = next((c for c in cols if any(k in c.lower() for k in rm["keys"])), None)
+
+            if c_name and c_name in target_row and c_name in prev_row:
+                try:
+                    t_val = abs(float(pd.to_numeric(str(target_row.get(c_name, 0.0)).replace(r"[^0-9.-]", ""), errors="coerce")))
+                    s_val = abs(float(pd.to_numeric(str(prev_row.get(c_name, 0.0)).replace(r"[^0-9.-]", ""), errors="coerce")))
+
+                    if s_val > 0 and t_val > 0:
+                        pct_diff = ((t_val - s_val) / s_val) * 100.0
+                        score = (100.0 - pct_diff) if rm["invert"] else (100.0 + pct_diff)
+                        score = max(0.0, min(100.0, score))
+                        sub_scores.append(score)
+                except Exception:
+                    continue
+
+        if sub_scores:
+            return sum(sub_scores) / len(sub_scores)
+        return 100
+        
     def get_readiness_color(val):
         if val >= 90: return "#28a745" # Green
         elif val >= 80: return "#ffc107" # Yellow
