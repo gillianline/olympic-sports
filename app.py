@@ -49,9 +49,10 @@ def load_data():
     df_cmj = pd.read_csv(st.secrets["sheet_cmj"])
     df_bs = pd.read_csv(st.secrets["sheet_belt_squat"])
     df_nb = pd.read_csv(st.secrets["sheet_nordbord"]) 
+    df_dj = pd.read_csv(st.secrets["sheet_drop_jump"]) 
     
     # Clean up column names: remove hidden spaces and fix capitalization
-    for df in [df_ff, df_roster, df_cmj, df_bs, df_nb]:
+    for df in [df_ff, df_roster, df_cmj, df_bs, df_nb, df_dj]:
         df.columns = df.columns.str.strip()
         
         # Bulletproof: Force any variation of "season" or "sport" to be capitalized correctly
@@ -77,11 +78,12 @@ def load_data():
     df_cmj = smart_merge(df_cmj, df_roster)
     df_bs = smart_merge(df_bs, df_roster)
     df_nb = smart_merge(df_nb, df_roster)
+    df_dj = smart_merge(df_dj, df_roster)
     
-    return df_ff, df_cmj, df_bs, df_nb, df_roster
+    return df_ff, df_cmj, df_bs, df_nb, df_dj, df_roster
 
 try:
-    df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_roster = load_data()
+    df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_roster = load_data()
 except Exception as e:
     st.error("Error loading secure data. Please check your sheet links in secrets.toml.")
     st.stop()
@@ -95,7 +97,7 @@ st.markdown("---")
 
 # 1. Season Filter (Moved to Main Page)
 all_seasons = set()
-for df in [df_roster, df_forceframe, df_cmj_full, df_bs_full, df_nb_full]:
+for df in [df_roster, df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full]:
     if 'Season' in df.columns:
         all_seasons.update(df['Season'].dropna().astype(str).unique().tolist())
 
@@ -138,6 +140,7 @@ filtered_ff = df_forceframe.copy()
 filtered_cmj = df_cmj_full.copy()
 filtered_bs = df_bs_full.copy()
 filtered_nb = df_nb_full.copy()
+filtered_dj = df_dj_full.copy()
 
 # Apply Season Filter Downstream
 if selected_season != "All Seasons":
@@ -145,6 +148,7 @@ if selected_season != "All Seasons":
     if 'Season' in filtered_cmj.columns: filtered_cmj = filtered_cmj[filtered_cmj['Season'].astype(str) == selected_season]
     if 'Season' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Season'].astype(str) == selected_season]
     if 'Season' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Season'].astype(str) == selected_season]
+    if 'Season' in filtered_dj.columns: filtered_dj = filtered_dj[filtered_dj['Season'].astype(str) == selected_season]
 
 # Apply Sport Filter Downstream
 if selected_sport != "All Sports":
@@ -152,6 +156,7 @@ if selected_sport != "All Sports":
     if 'Sport' in filtered_cmj.columns: filtered_cmj = filtered_cmj[filtered_cmj['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_bs.columns: filtered_bs = filtered_bs[filtered_bs['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Sport'].astype(str) == selected_sport]
+    if 'Sport' in filtered_dj.columns: filtered_dj = filtered_dj[filtered_dj['Sport'].astype(str) == selected_sport]
 
 # Apply Player Filter Downstream
 if selected_player != "All Players":
@@ -159,6 +164,7 @@ if selected_player != "All Players":
     filtered_cmj = filtered_cmj[filtered_cmj['Name'].astype(str) == selected_player]
     filtered_bs = filtered_bs[filtered_bs['Name'].astype(str) == selected_player]
     filtered_nb = filtered_nb[filtered_nb['Name'].astype(str) == selected_player]
+    filtered_dj = filtered_dj[filtered_dj['Name'].astype(str) == selected_player]
 
 # ==========================================
 # 4. HELPER FUNCTIONS
@@ -204,6 +210,12 @@ filtered_cmj['Date'] = pd.to_datetime(filtered_cmj['Date'], errors='coerce')
 filtered_cmj['Date_Str'] = filtered_cmj['Date'].dt.strftime("%m/%d/%y")
 cmj_data = filtered_cmj.copy()
 
+# ---- DROP JUMP DATA PREP ----
+if not filtered_dj.empty and 'Date' in filtered_dj.columns:
+    filtered_dj['Date'] = pd.to_datetime(filtered_dj['Date'], errors='coerce')
+    filtered_dj['Date_Str'] = filtered_dj['Date'].dt.strftime("%m/%d/%y")
+dj_data = filtered_dj.copy()
+
 # ---- NORDBORD DATA PREP ----
 if not filtered_nb.empty and 'Date' in filtered_nb.columns:
     filtered_nb['Date'] = pd.to_datetime(filtered_nb['Date'], errors='coerce')
@@ -219,7 +231,7 @@ roster_players = filtered_roster['Name'].dropna().unique().tolist()
 # ==========================================
 
 testing_tab_intake, testing_tab_cmj, testing_tab_wellness, testing_tab_overall = st.tabs(
-    ["Intake Assessment", "CMJ", "Wellness Jump", "Overall Profile"]
+    ["Intake Assessment", "Jump Testing", "Wellness Jump", "Overall Profile"]
 )
 
 # ==========================================
@@ -626,22 +638,23 @@ with testing_tab_intake:
 
 
 # ==========================================
-# SECTION 5B: CMJ TAB
+# SECTION 5B: JUMPS TAB (CMJ & DROP JUMP)
 # ==========================================
 with testing_tab_cmj:
     st.markdown(
-        f'<div class="vball-section-title">CMJ Performance History — {season_label}</div>',
+        f'<div class="vball-section-title">Jump Testing Performance — {season_label}</div>',
         unsafe_allow_html=True,
     )
 
     c_filter, _ = st.columns([1, 2])
     with c_filter:
         selected_player_t = st.selectbox(
-            "Select Athlete:", roster_players, key=f"cmj_player_select_{season_key}"
+            "Select Athlete:", roster_players, key=f"jump_player_select_{season_key}"
         )
 
     st.markdown("<br>", unsafe_allow_html=True)
-
+    
+    # --- CMJ SECTION ---
     p_cmj = (
         cmj_data[cmj_data["Name"] == selected_player_t]
         .sort_values("Date")
@@ -650,129 +663,136 @@ with testing_tab_cmj:
         else pd.DataFrame()
     )
 
-    jump_cols = [c for c in p_cmj.columns if "jump" in c.lower() or "height" in c.lower()]
-    j_col = jump_cols[0] if jump_cols else None
-    rsi_cols = [c for c in p_cmj.columns if "rsi" in c.lower()]
-    rsi_col = rsi_cols[0] if rsi_cols else None
+    if not p_cmj.empty:
+        st.markdown(f"#### Countermovement Jump (CMJ) History")
+        jump_cols = [c for c in p_cmj.columns if "jump" in c.lower() or "height" in c.lower()]
+        j_col = jump_cols[0] if jump_cols else None
+        rsi_cols = [c for c in p_cmj.columns if "rsi" in c.lower()]
+        rsi_col = rsi_cols[0] if rsi_cols else None
 
-    if not p_cmj.empty and j_col:
-        p_cmj["Jump_Height_Clean"] = pd.to_numeric(
-            p_cmj[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True),
-            errors="coerce",
-        )
+        if j_col:
+            p_cmj["Jump_Height_Clean"] = pd.to_numeric(p_cmj[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+            
+            fig_jump_trend = go.Figure()
+            fig_jump_trend.add_trace(go.Scatter(
+                x=p_cmj["Date"], y=p_cmj["Jump_Height_Clean"],
+                name="Jump Height", mode="lines+markers", connectgaps=True,
+                yaxis="y", line=dict(color="#FF8200", width=4), marker=dict(size=8, color="#FF8200"),
+            ))
 
-        fig_jump_trend = go.Figure()
-        fig_jump_trend.add_trace(
-            go.Scatter(
-                x=p_cmj["Date"],
-                y=p_cmj["Jump_Height_Clean"],
-                name="Jump Height",
-                mode="lines+markers",
-                connectgaps=True,
-                yaxis="y",
-                line=dict(color="#FF8200", width=4),
-                marker=dict(size=8, color="#FF8200"),
+            if rsi_col:
+                p_cmj["RSI_Clean"] = pd.to_numeric(p_cmj[rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+                fig_jump_trend.add_trace(go.Scatter(
+                    x=p_cmj["Date"], y=p_cmj["RSI_Clean"],
+                    name="RSI Modified", mode="lines+markers", connectgaps=True,
+                    yaxis="y2", line=dict(color="#38BDF8", width=3, dash="dot"), marker=dict(size=8, color="#38BDF8"),
+                ))
+
+            fig_jump_trend.update_layout(
+                height=320, margin=dict(l=40, r=40, t=50, b=40),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0.01, font=dict(size=13, color="#0F172A")),
+                xaxis=dict(title=None, type="date", tickformat="%b %d\n%Y", showgrid=False, showline=True, linewidth=1.5, linecolor="#0F172A", tickfont=dict(color="#64748B", size=12)),
+                yaxis=dict(showgrid=False, showline=True, linewidth=1.5, linecolor="#0F172A", tickfont=dict(color="#64748B", size=12), side="left"),
+                yaxis2=dict(showgrid=False, showline=True, linewidth=1.5, linecolor="#0F172A", tickfont=dict(color="#64748B", size=12), overlaying="y", side="right", anchor="x"),
             )
-        )
+            st.plotly_chart(fig_jump_trend, use_container_width=True, key=f"cmj_trend_{season_key}")
 
-        if rsi_col:
-            p_cmj["RSI_Clean"] = pd.to_numeric(
-                p_cmj[rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True),
-                errors="coerce",
-            )
-            fig_jump_trend.add_trace(
-                go.Scatter(
-                    x=p_cmj["Date"],
-                    y=p_cmj["RSI_Clean"],
-                    name="RSI Modified",
-                    mode="lines+markers",
-                    connectgaps=True,
-                    yaxis="y2",
-                    line=dict(color="#38BDF8", width=3, dash="dot"),
-                    marker=dict(size=8, color="#38BDF8"),
-                )
-            )
+            target_cols = ["Test Type", "Date", "BW [KG]"]
+            if j_col: target_cols.append(j_col)
+            target_cols.extend(["Peak Power [W]", "Eccentric Braking RFD [N/s]"])
+            if rsi_col: target_cols.append(rsi_col)
+            target_cols.extend(["Concentric Peak Velocity [m/s]", "CMJ Stiffness [N/m]"])
+            
+            final_cols = [c for c in target_cols if c in p_cmj.columns]
+            df_cmj_display = p_cmj[final_cols].copy()
+            
+            rename_map = {}
+            if j_col: rename_map[j_col] = "Jump Height (cm)"
+            if rsi_col: rename_map[rsi_col] = "RSI [m/s]"
+            df_cmj_display = df_cmj_display.rename(columns=rename_map)
+            
+            if "Date" in df_cmj_display.columns:
+                df_cmj_display["Date"] = pd.to_datetime(df_cmj_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
 
-        fig_jump_trend.update_layout(
-            height=320,
-            margin=dict(l=40, r=40, t=50, b=40),
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.08,
-                xanchor="left",
-                x=0.01,
-                font=dict(size=13, color="#0F172A"),
-            ),
-            xaxis=dict(
-                title=None,
-                type="date",
-                tickformat="%b %d\n%Y",
-                showgrid=False,
-                showline=True,
-                linewidth=1.5,
-                linecolor="#0F172A",
-                tickfont=dict(color="#64748B", size=12),
-            ),
-            yaxis=dict(
-                showgrid=False,
-                showline=True,
-                linewidth=1.5,
-                linecolor="#0F172A",
-                tickfont=dict(color="#64748B", size=12),
-                side="left",
-            ),
-            yaxis2=dict(
-                showgrid=False,
-                showline=True,
-                linewidth=1.5,
-                linecolor="#0F172A",
-                tickfont=dict(color="#64748B", size=12),
-                overlaying="y",
-                side="right",
-                anchor="x",
-            ),
-        )
-        st.plotly_chart(fig_jump_trend, use_container_width=True, key=f"cmj_trend_{season_key}")
-
-        st.divider()
-
-        st.markdown(f"### Jump History Logs for {selected_player_t} ({season_label})")
-        
-        jh_col = next((c for c in p_cmj.columns if "jump height" in c.lower()), None)
-        rsi_col = next((c for c in p_cmj.columns if "rsi" in c.lower()), None)
-        
-        target_cols = ["Test Type", "Date", "BW [KG]"]
-        if jh_col: target_cols.append(jh_col)
-        target_cols.extend(["Peak Power [W]", "Eccentric Braking RFD [N/s]"])
-        if rsi_col: target_cols.append(rsi_col)
-        target_cols.extend(["Concentric Peak Velocity [m/s]", "CMJ Stiffness [N/m]"])
-        
-        final_cols = [c for c in target_cols if c in p_cmj.columns]
-        df_cmj_display = p_cmj[final_cols].copy()
-        
-        rename_map = {}
-        if jh_col: rename_map[jh_col] = "Jump Height (cm)"
-        if rsi_col: rename_map[rsi_col] = "RSI [m/s]"
-        df_cmj_display = df_cmj_display.rename(columns=rename_map)
-        
-        if "Date" in df_cmj_display.columns:
-            df_cmj_display["Date"] = pd.to_datetime(df_cmj_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
-
-        for col in df_cmj_display.columns:
-            if col not in ["Test Type", "Date"]:
-                df_cmj_display[col] = pd.to_numeric(df_cmj_display[col], errors="coerce").apply(
-                    lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
-                )
-        
-        df_cmj_display = df_cmj_display.dropna(axis=1, how='all').fillna("-")
-        
-        st.dataframe(df_cmj_display, use_container_width=True, hide_index=True)
-        
+            for col in df_cmj_display.columns:
+                if col not in ["Test Type", "Date"]:
+                    df_cmj_display[col] = pd.to_numeric(df_cmj_display[col], errors="coerce").apply(lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA)
+            
+            df_cmj_display = df_cmj_display.dropna(axis=1, how='all').fillna("-")
+            st.dataframe(df_cmj_display, use_container_width=True, hide_index=True)
     else:
         st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")       
+
+    # --- DROP JUMP SECTION ---
+    st.divider()
+    p_dj = (
+        dj_data[dj_data["Name"] == selected_player_t]
+        .sort_values("Date")
+        .copy()
+        if not dj_data.empty
+        else pd.DataFrame()
+    )
+    
+    if not p_dj.empty:
+        st.markdown(f"#### Drop Jump Performance History")
+        
+        dj_jh_col = next((c for c in p_dj.columns if "jump height" in c.lower()), None)
+        dj_rsi_col = next((c for c in p_dj.columns if "rsi" in c.lower()), None)
+
+        if dj_jh_col or dj_rsi_col:
+            fig_dj_trend = go.Figure()
+            
+            if dj_jh_col:
+                p_dj["DJ_JH_Clean"] = pd.to_numeric(p_dj[dj_jh_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+                fig_dj_trend.add_trace(go.Scatter(
+                    x=p_dj["Date"], y=p_dj["DJ_JH_Clean"],
+                    name="Jump Height", mode="lines+markers", connectgaps=True,
+                    yaxis="y", line=dict(color="#FF8200", width=4), marker=dict(size=8, color="#FF8200"),
+                ))
+
+            if dj_rsi_col:
+                p_dj["DJ_RSI_Clean"] = pd.to_numeric(p_dj[dj_rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+                fig_dj_trend.add_trace(go.Scatter(
+                    x=p_dj["Date"], y=p_dj["DJ_RSI_Clean"],
+                    name="RSI", mode="lines+markers", connectgaps=True,
+                    yaxis="y2", line=dict(color="#38BDF8", width=3, dash="dot"), marker=dict(size=8, color="#38BDF8"),
+                ))
+
+            fig_dj_trend.update_layout(
+                height=320, margin=dict(l=40, r=40, t=50, b=40),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0.01, font=dict(size=13, color="#0F172A")),
+                xaxis=dict(title=None, type="date", tickformat="%b %d\n%Y", showgrid=False, showline=True, linewidth=1.5, linecolor="#0F172A", tickfont=dict(color="#64748B", size=12)),
+                yaxis=dict(showgrid=False, showline=True, linewidth=1.5, linecolor="#0F172A", tickfont=dict(color="#64748B", size=12), side="left"),
+                yaxis2=dict(showgrid=False, showline=True, linewidth=1.5, linecolor="#0F172A", tickfont=dict(color="#64748B", size=12), overlaying="y", side="right", anchor="x"),
+            )
+            st.plotly_chart(fig_dj_trend, use_container_width=True, key=f"dj_trend_{season_key}")
+
+        target_cols_dj = ["Test Type", "Date", "BW [KG]", "Drop Height [cm]"]
+        if dj_rsi_col: target_cols_dj.append(dj_rsi_col)
+        if dj_jh_col: target_cols_dj.append(dj_jh_col)
+        target_cols_dj.extend(["Contact Time [s]", "Effective Drop [cm]"])
+        
+        final_cols_dj = [c for c in target_cols_dj if c in p_dj.columns]
+        df_dj_display = p_dj[final_cols_dj].copy()
+        
+        rename_map_dj = {}
+        if dj_jh_col: rename_map_dj[dj_jh_col] = "Jump Height (cm)"
+        if dj_rsi_col: rename_map_dj[dj_rsi_col] = "RSI [m/s]"
+        df_dj_display = df_dj_display.rename(columns=rename_map_dj)
+        
+        if "Date" in df_dj_display.columns:
+            df_dj_display["Date"] = pd.to_datetime(df_dj_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+
+        for col in df_dj_display.columns:
+            if col not in ["Test Type", "Date"]:
+                df_dj_display[col] = pd.to_numeric(df_dj_display[col], errors="coerce").apply(lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA)
+        
+        df_dj_display = df_dj_display.dropna(axis=1, how='all').fillna("-")
+        st.dataframe(df_dj_display, use_container_width=True, hide_index=True)
+    else:
+        st.info(f"No Drop Jump logs found for {selected_player_t} in {season_label}.")       
 
 
 # ==========================================
@@ -1258,6 +1278,31 @@ with testing_tab_overall:
                     "Category": "Countermovement Jump",
                     "Best Test Value": f"{best_cmj['JH_Val']:.2f} cm",
                     "Date Achieved": format_date_clean(best_cmj.get("Date"))
+                })
+
+    p_dj_ov = dj_data[dj_data["Name"] == selected_ov_athlete] if not dj_data.empty and "Name" in dj_data.columns else pd.DataFrame()
+    if not p_dj_ov.empty:
+        dj_jh_c = next((c for c in p_dj_ov.columns if "jump height" in c.lower()), None)
+        if dj_jh_c:
+            p_dj_ov["DJ_JH_Val"] = pd.to_numeric(p_dj_ov[dj_jh_c].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+            valid_dj_jh = p_dj_ov.dropna(subset=["DJ_JH_Val"])
+            if not valid_dj_jh.empty:
+                best_dj = valid_dj_jh.sort_values("DJ_JH_Val", ascending=False).iloc[0]
+                records.append({
+                    "Category": "Drop Jump - Max Height",
+                    "Best Test Value": f"{best_dj['DJ_JH_Val']:.2f} cm",
+                    "Date Achieved": format_date_clean(best_dj.get("Date"))
+                })
+        dj_rsi_c = next((c for c in p_dj_ov.columns if "rsi" in c.lower()), None)
+        if dj_rsi_c:
+            p_dj_ov["DJ_RSI_Val"] = pd.to_numeric(p_dj_ov[dj_rsi_c].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+            valid_dj_rsi = p_dj_ov.dropna(subset=["DJ_RSI_Val"])
+            if not valid_dj_rsi.empty:
+                best_rsi = valid_dj_rsi.sort_values("DJ_RSI_Val", ascending=False).iloc[0]
+                records.append({
+                    "Category": "Drop Jump - Max RSI",
+                    "Best Test Value": f"{best_rsi['DJ_RSI_Val']:.2f} m/s",
+                    "Date Achieved": format_date_clean(best_rsi.get("Date"))
                 })
 
     p_nord_ov = nordic_data[nordic_data["Name"] == selected_ov_athlete].copy() if not nordic_data.empty and "Name" in nordic_data.columns else pd.DataFrame()
