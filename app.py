@@ -97,7 +97,6 @@ for df in [df_roster, df_forceframe, df_cmj_full, df_bs_full, df_nb_full]:
     if 'Season' in df.columns:
         all_seasons.update(df['Season'].dropna().astype(str).unique().tolist())
 
-# Place the Season filter in a column so it doesn't stretch across the entire screen
 col_season, _ = st.columns([1, 3])
 with col_season:
     if all_seasons:
@@ -165,7 +164,6 @@ if selected_player != "All Players":
 def format_date_clean(date_val):
     if pd.isna(date_val): return "N/A"
     try:
-        # Assumes date is something like '9/11/26'
         dt = pd.to_datetime(date_val)
         return dt.strftime("%b %d, %Y")
     except:
@@ -183,19 +181,14 @@ def render_vball_table(df):
 df_forceframe['Date'] = pd.to_datetime(df_forceframe['Date'], errors='coerce')
 df_forceframe['Date_Str'] = df_forceframe['Date'].dt.strftime("%m/%d/%y")
 
-# Split by the specific tests in your soccer sheet
 ankle_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Ankle', na=False, case=False)]
 knee_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Knee', na=False, case=False)]
 shoulder_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Shoulder', na=False, case=False)]
 
-# General Hip Data
 hip_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip', na=False, case=False)]
-
-# Specific Hip Data
 hip_ad_ab_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip AD/AB', na=False, case=False)]
 hip_ir_er_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip IR/ER', na=False, case=False)]
 
-# Create empty DataFrames for sheets not yet connected
 nordic_data = pd.DataFrame()
 
 # ---- BELT SQUAT DATA PREP ----
@@ -208,7 +201,6 @@ belt_squat_data = filtered_bs.copy()
 filtered_cmj['Date'] = pd.to_datetime(filtered_cmj['Date'], errors='coerce')
 filtered_cmj['Date_Str'] = filtered_cmj['Date'].dt.strftime("%m/%d/%y")
 cmj_data = filtered_cmj.copy()
-cmj_raw = filtered_cmj.copy()
 
 # ---- NORDBORD DATA PREP ----
 if not filtered_nb.empty and 'Date' in filtered_nb.columns:
@@ -216,7 +208,6 @@ if not filtered_nb.empty and 'Date' in filtered_nb.columns:
     filtered_nb['Date_Str'] = filtered_nb['Date'].dt.strftime("%m/%d/%y")
 nordic_data = filtered_nb.copy()
 
-# Variables expected by your snippet (Now entirely dynamic!)
 season_label = selected_season if selected_season != "All Seasons" else "All Seasons"
 season_key = season_label.replace(" ", "_").lower()
 roster_players = filtered_roster['Name'].dropna().unique().tolist()
@@ -225,11 +216,13 @@ roster_players = filtered_roster['Name'].dropna().unique().tolist()
 # 6. DASHBOARD UI
 # ==========================================
 
-# Sub-tabs directly on the main page (Added Wellness Jump Tab)
 testing_tab_intake, testing_tab_cmj, testing_tab_wellness, testing_tab_overall = st.tabs(
     ["Intake Assessment", "CMJ", "Wellness Jump", "Overall Profile"]
 )
 
+# ==========================================
+# SECTION 5A: INTAKE ASSESSMENT
+# ==========================================
 with testing_tab_intake:
     st.markdown(
         f"<h3 style='color:#1D1D1F; font-weight:900; text-transform:uppercase;'>Athlete Intake Assessment ({season_label})</h3>",
@@ -318,31 +311,27 @@ with testing_tab_intake:
                         <line x1="55" y1="168" x2="81" y2="168" stroke="#D32F2F" stroke-width="1.1" />
                     </g>
 
-                    <!-- 1. Belt Squat (Core / Waist) -->
+                    <!-- Nodes -->
                     <line x1="68" y1="84" x2="112" y2="84" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
                     <circle cx="68" cy="84" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
                     <rect x="112" y="76" width="16" height="16" rx="4" fill="#FF8200" />
                     <text x="120" y="88" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">1</text>
                     
-                    <!-- 2. Hip (AD/AB & IR/ER) -->
                     <line x1="58" y1="116" x2="24" y2="116" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
                     <circle cx="58" cy="116" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
                     <rect x="8" y="108" width="16" height="16" rx="4" fill="#4895DB" />
                     <text x="16" y="120" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">2</text>
                     
-                    <!-- 3. Knee (Ext/Flex) -->
                     <line x1="64" y1="140" x2="112" y2="140" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
                     <circle cx="64" cy="140" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
                     <rect x="112" y="132" width="16" height="16" rx="4" fill="#FF8200" />
                     <text x="120" y="144" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">3</text>
                     
-                    <!-- 4. Hamstring (NordBord) -->
                     <line x1="56" y1="155" x2="24" y2="155" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
                     <circle cx="56" cy="155" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
                     <rect x="8" y="147" width="16" height="16" rx="4" fill="#4895DB" />
                     <text x="16" y="159" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">4</text>
                     
-                    <!-- 5. Ankle -->
                     <line x1="72" y1="178" x2="112" y2="178" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
                     <circle cx="72" cy="178" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
                     <rect x="112" y="170" width="16" height="16" rx="4" fill="#FF8200" />
@@ -798,144 +787,208 @@ with testing_tab_wellness:
         f'<div class="vball-section-title">Neuromuscular Readiness & Wellness ({season_label})</div>',
         unsafe_allow_html=True,
     )
+    
+    # Helper to calculate readiness consistent with individual mode
+    def calc_wellness_for_date(ath_cmj_df, target_date_str):
+        df_s = ath_cmj_df.sort_values("Date")
+        j_c = next((c for c in df_s.columns if "jump" in c.lower() or "height" in c.lower()), None)
+        r_c = next((c for c in df_s.columns if "rsi" in c.lower()), None)
+        
+        if not j_c: return 0
+        df_s["JH_Clean"] = pd.to_numeric(df_s[j_c].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+        if r_c: df_s["RSI_Clean"] = pd.to_numeric(df_s[r_c].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+        
+        valid_j = df_s.dropna(subset=["JH_Clean"])
+        if valid_j.empty: return 0
+        
+        max_j = valid_j["JH_Clean"].max()
+        target_df = valid_j[valid_j["Date_Str"] == target_date_str]
+        if target_df.empty: return 0
+        
+        latest_j = target_df.iloc[-1]["JH_Clean"]
+        j_score = (latest_j / max_j * 100) if max_j > 0 else 0
+        
+        if r_c:
+            valid_r = df_s.dropna(subset=["RSI_Clean"])
+            if not valid_r.empty:
+                max_r = valid_r["RSI_Clean"].max()
+                target_r = valid_r[valid_r["Date_Str"] == target_date_str]
+                if not target_r.empty:
+                    latest_r = target_r.iloc[-1]["RSI_Clean"]
+                    r_score = (latest_r / max_r * 100) if max_r > 0 else 0
+                    if r_score > 0:
+                        return (j_score + r_score) / 2
+        return j_score
 
-    c_well, _ = st.columns([1, 2])
-    with c_well:
-        selected_well_athlete = st.selectbox(
-            "Select Athlete for Readiness Scan:",
-            roster_players,
-            key=f"well_ath_select_{season_key}"
-        )
+    def get_readiness_color(val):
+        if val >= 90: return "#28a745" # Green
+        elif val >= 80: return "#ffc107" # Yellow
+        else: return "#dc3545" # Red
 
-    p_cmj_well = cmj_data[cmj_data["Name"] == selected_well_athlete].sort_values("Date").copy() if not cmj_data.empty else pd.DataFrame()
+    sel_cmj_mode = st.radio("Select View Mode", ["Individual Readiness", "Team CMJ Summary"], horizontal=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    if not p_cmj_well.empty:
-        # Dynamically locate Jump Height and RSI columns
-        jh_col = next((c for c in p_cmj_well.columns if "jump" in c.lower() or "height" in c.lower()), None)
-        rsi_col = next((c for c in p_cmj_well.columns if "rsi" in c.lower()), None)
+    if sel_cmj_mode == "Individual Readiness":
+        c_well, _ = st.columns([1, 2])
+        with c_well:
+            selected_well_athlete = st.selectbox(
+                "Select Athlete for Readiness Scan:",
+                roster_players,
+                key=f"well_ath_select_{season_key}"
+            )
 
-        if jh_col:
-            p_cmj_well["JH_Clean"] = pd.to_numeric(p_cmj_well[jh_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
-        if rsi_col:
-            p_cmj_well["RSI_Clean"] = pd.to_numeric(p_cmj_well[rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+        p_cmj_well = cmj_data[cmj_data["Name"] == selected_well_athlete].sort_values("Date").copy() if not cmj_data.empty else pd.DataFrame()
 
-        valid_jh = p_cmj_well.dropna(subset=["JH_Clean"]) if jh_col else pd.DataFrame()
+        if not p_cmj_well.empty:
+            jh_col = next((c for c in p_cmj_well.columns if "jump" in c.lower() or "height" in c.lower()), None)
+            rsi_col = next((c for c in p_cmj_well.columns if "rsi" in c.lower()), None)
 
-        if not valid_jh.empty:
-            
-            # --- 1. CALCULATE OVERALL WELLNESS SCORE ---
-            latest_jh = valid_jh.iloc[-1]["JH_Clean"]
-            max_jh = valid_jh["JH_Clean"].max()
-            jh_readiness = (latest_jh / max_jh) * 100 if max_jh > 0 else 0
+            if jh_col: p_cmj_well["JH_Clean"] = pd.to_numeric(p_cmj_well[jh_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+            if rsi_col: p_cmj_well["RSI_Clean"] = pd.to_numeric(p_cmj_well[rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
 
-            rsi_readiness = 0
-            if rsi_col:
-                valid_rsi = p_cmj_well.dropna(subset=["RSI_Clean"])
-                if not valid_rsi.empty:
-                    latest_rsi = valid_rsi.iloc[-1]["RSI_Clean"]
-                    max_rsi = valid_rsi["RSI_Clean"].max()
-                    rsi_readiness = (latest_rsi / max_rsi) * 100 if max_rsi > 0 else 0
+            valid_jh = p_cmj_well.dropna(subset=["JH_Clean"]) if jh_col else pd.DataFrame()
 
-            # Calculate a blended Wellness score using Jump Height & RSI
-            if rsi_col and rsi_readiness > 0:
-                wellness_score = (jh_readiness + rsi_readiness) / 2
-            else:
-                wellness_score = jh_readiness
+            if not valid_jh.empty:
+                # Calculate Single Athlete Score
+                latest_date_str = valid_jh.iloc[-1]["Date_Str"]
+                wellness_score = calc_wellness_for_date(p_cmj_well, latest_date_str)
 
-            # --- 2. RENDER TOP SECTION (GAUGE & SCATTER) ---
-            w_col1, w_col2 = st.columns([1, 1.5])
-            
-            with w_col1:
-                # Plotly Gauge Chart for Readiness Score
-                fig_gauge = go.Figure()
-                fig_gauge.add_trace(go.Indicator(
-                    mode="gauge+number",
-                    value=wellness_score,
-                    title={'text': "Neuromuscular Readiness", 'font': {'size': 18}},
-                    number={'suffix': "%", 'font': {'size': 40, 'color': '#1D1D1F'}},
-                    gauge={
-                        'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                        'bar': {'color': "#1D1D1F"},
-                        'bgcolor': "white",
-                        'borderwidth': 2,
-                        'bordercolor': "gray",
-                        'steps': [
-                            {'range': [0, 85], 'color': "rgba(220, 53, 69, 0.6)"},   # Red / Fatigued
-                            {'range': [85, 95], 'color': "rgba(255, 193, 7, 0.6)"},  # Yellow / Normal
-                            {'range': [95, 100], 'color': "rgba(40, 167, 69, 0.6)"}  # Green / Elite/Fresh
-                        ],
-                        'threshold': {
-                            'line': {'color': "black", 'width': 4},
-                            'thickness': 0.75,
-                            'value': 90
-                        }
-                    }
-                ))
-                fig_gauge.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
-                st.plotly_chart(fig_gauge, use_container_width=True)
+                # --- 2. RENDER TOP SECTION (GAUGE & SCATTER) ---
+                w_col1, w_col2 = st.columns([1, 1.5])
                 
-                st.markdown(f"**Latest Test:** {format_date_clean(valid_jh.iloc[-1]['Date'])}")
-
-            with w_col2:
-                # RSI vs Jump Height Quadrant Scatter Chart
-                if rsi_col and not valid_rsi.empty:
-                    fig_scatter = go.Figure()
-
-                    # Color mapping to highlight the most recent jump
-                    colors = ["#64748B"] * (len(valid_rsi) - 1) + ["#FF8200"] 
-                    sizes = [10] * (len(valid_rsi) - 1) + [16]
-
-                    fig_scatter.add_trace(go.Scatter(
-                        x=valid_rsi["JH_Clean"],
-                        y=valid_rsi["RSI_Clean"],
-                        mode="markers",
-                        text=valid_rsi["Date_Str"],
-                        hovertemplate="Date: %{text}<br>Jump Height: %{x:.2f}<br>RSI: %{y:.2f}<extra></extra>",
-                        marker=dict(
-                            size=sizes,
-                            color=colors,
-                            line=dict(width=1, color="DarkSlateGrey")
-                        )
+                with w_col1:
+                    fig_gauge = go.Figure()
+                    fig_gauge.add_trace(go.Indicator(
+                        mode="gauge+number",
+                        value=wellness_score,
+                        title={'text': "Neuromuscular Readiness", 'font': {'size': 18}},
+                        number={'suffix': "%", 'font': {'size': 40, 'color': '#1D1D1F'}},
+                        gauge={
+                            'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                            'bar': {'color': "#1D1D1F"},
+                            'bgcolor': "white",
+                            'borderwidth': 2,
+                            'bordercolor': "gray",
+                            'steps': [
+                                {'range': [0, 80], 'color': "rgba(220, 53, 69, 0.6)"},   # Red / Fatigued
+                                {'range': [80, 90], 'color': "rgba(255, 193, 7, 0.6)"},  # Yellow / Normal
+                                {'range': [90, 100], 'color': "rgba(40, 167, 69, 0.6)"}  # Green / Elite/Fresh
+                            ],
+                            'threshold': {
+                                'line': {'color': "black", 'width': 4},
+                                'thickness': 0.75,
+                                'value': 90
+                            }
+                        }
                     ))
+                    fig_gauge.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
+                    st.plotly_chart(fig_gauge, use_container_width=True)
+                    st.markdown(f"**Latest Test:** {format_date_clean(valid_jh.iloc[-1]['Date'])}")
 
-                    # Add Average Lines for Quadrants
-                    mean_jh = valid_rsi["JH_Clean"].mean()
-                    mean_rsi = valid_rsi["RSI_Clean"].mean()
+                with w_col2:
+                    if rsi_col:
+                        valid_rsi = p_cmj_well.dropna(subset=["RSI_Clean"])
+                        if not valid_rsi.empty:
+                            fig_scatter = go.Figure()
+                            colors = ["#64748B"] * (len(valid_rsi) - 1) + ["#FF8200"] 
+                            sizes = [10] * (len(valid_rsi) - 1) + [16]
 
-                    fig_scatter.add_vline(x=mean_jh, line_dash="dash", line_color="#9CA3AF")
-                    fig_scatter.add_hline(y=mean_rsi, line_dash="dash", line_color="#9CA3AF")
+                            fig_scatter.add_trace(go.Scatter(
+                                x=valid_rsi["JH_Clean"],
+                                y=valid_rsi["RSI_Clean"],
+                                mode="markers",
+                                text=valid_rsi["Date_Str"],
+                                hovertemplate="Date: %{text}<br>Jump Height: %{x:.2f}<br>RSI: %{y:.2f}<extra></extra>",
+                                marker=dict(size=sizes, color=colors, line=dict(width=1, color="DarkSlateGrey"))
+                            ))
 
-                    # Add Quadrant Annotations (Elite vs Fatigued)
-                    fig_scatter.add_annotation(
-                        x=valid_rsi["JH_Clean"].max(), 
-                        y=valid_rsi["RSI_Clean"].max(), 
-                        text="Elite (High JH, High RSI)", 
-                        showarrow=False, font=dict(color="#28a745", size=11, weight="bold")
-                    )
-                    fig_scatter.add_annotation(
-                        x=valid_rsi["JH_Clean"].min(), 
-                        y=valid_rsi["RSI_Clean"].min(), 
-                        text="Fatigued (Low JH, Low RSI)", 
-                        showarrow=False, font=dict(color="#dc3545", size=11, weight="bold")
-                    )
+                            mean_jh = valid_rsi["JH_Clean"].mean()
+                            mean_rsi = valid_rsi["RSI_Clean"].mean()
 
-                    fig_scatter.update_layout(
-                        title="RSI vs Jump Height Quadrants",
-                        xaxis_title="Jump Height (cm)",
-                        yaxis_title="RSI (m/s)",
-                        height=350,
-                        margin=dict(l=20, r=20, t=50, b=20),
-                        plot_bgcolor="rgba(0,0,0,0)",
-                        paper_bgcolor="#F8F9FA"
-                    )
-                    st.plotly_chart(fig_scatter, use_container_width=True)
-                else:
-                    st.info("Insufficient RSI data to generate the Neuromuscular Quadrant map.")
+                            fig_scatter.add_vline(x=mean_jh, line_dash="dash", line_color="#9CA3AF")
+                            fig_scatter.add_hline(y=mean_rsi, line_dash="dash", line_color="#9CA3AF")
 
+                            fig_scatter.add_annotation(x=valid_rsi["JH_Clean"].max(), y=valid_rsi["RSI_Clean"].max(), text="Elite (High JH, High RSI)", showarrow=False, font=dict(color="#28a745", size=11, weight="bold"))
+                            fig_scatter.add_annotation(x=valid_rsi["JH_Clean"].min(), y=valid_rsi["RSI_Clean"].min(), text="Fatigued (Low JH, Low RSI)", showarrow=False, font=dict(color="#dc3545", size=11, weight="bold"))
+
+                            fig_scatter.update_layout(
+                                title="RSI vs Jump Height Quadrants", xaxis_title="Jump Height (cm)", yaxis_title="RSI (m/s)",
+                                height=350, margin=dict(l=20, r=20, t=50, b=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="#F8F9FA"
+                            )
+                            st.plotly_chart(fig_scatter, use_container_width=True)
+                        else:
+                            st.info("Insufficient RSI data to generate the Neuromuscular Quadrant map.")
+            else:
+                 st.info("Insufficient Jump Height data to calculate readiness.")
         else:
-             st.info("Insufficient Jump Height data to calculate readiness.")
-    else:
-        st.info(f"No CMJ records found for {selected_well_athlete} in {season_label}.")
+            st.info(f"No CMJ records found for {selected_well_athlete} in {season_label}.")
+
+    elif sel_cmj_mode == "Team CMJ Summary":
+        st.markdown("### Team Wellness Score Overview")
+        if cmj_data.empty:
+            st.info("No CMJ data available.")
+        else:
+            team_cmj_dates = cmj_data["Date"].dropna().dt.strftime("%m/%d/%y").drop_duplicates().sort_values(ascending=False).tolist()
+
+            c_sum_d1, c_sum_d2 = st.columns([1.5, 2])
+            with c_sum_d1:
+                sel_team_cmj_date = st.selectbox("Evaluation Test Date", team_cmj_dates, index=0, key="team_cmj_eval_date")
+            with c_sum_d2:
+                positions = [p for p in filtered_roster["Position"].unique() if pd.notna(p) and p != "N/A"] if "Position" in filtered_roster.columns else []
+                team_pos_f = st.selectbox("Filter by Position", ["All Positions"] + sorted(positions), key="team_cmj_pos_filter")
+
+            team_cmj_rows = []
+            for ath_name in sorted(cmj_data["Name"].unique()):
+                ath_sub_cmj = cmj_data[cmj_data["Name"] == ath_name].sort_values("Date")
+                if ath_sub_cmj.empty:
+                    continue
+
+                meta_row = filtered_roster[filtered_roster["Name"] == ath_name]
+                pos_str = meta_row["Position"].iloc[0] if not meta_row.empty and "Position" in meta_row.columns else "N/A"
+                photo_url = meta_row["PhotoURL"].iloc[0] if not meta_row.empty and "PhotoURL" in meta_row.columns else "https://www.w3schools.com/howto/img_avatar.png"
+                
+                if team_pos_f != "All Positions" and pos_str != team_pos_f:
+                    continue
+
+                ath_date_match = ath_sub_cmj[ath_sub_cmj["Date_Str"] == sel_team_cmj_date]
+                if ath_date_match.empty:
+                    continue
+
+                readiness_pct = int(round(calc_wellness_for_date(ath_sub_cmj, sel_team_cmj_date)))
+                z_color = get_readiness_color(readiness_pct)
+                
+                team_cmj_rows.append({
+                    "Athlete": ath_name,
+                    "PhotoURL": photo_url,
+                    "Position": pos_str,
+                    "Readiness %": readiness_pct,
+                    "Status_Color": z_color,
+                })
+
+            if team_cmj_rows:
+                cmj_team_df = pd.DataFrame(team_cmj_rows).sort_values("Readiness %", ascending=False)
+                c_kpi1, c_kpi2, c_kpi3, c_kpi4 = st.columns(4)
+                avg_team_readiness = cmj_team_df["Readiness %"].mean()
+                peak_count = sum(1 for r in team_cmj_rows if r["Readiness %"] >= 90)
+                fatigue_count = sum(1 for r in team_cmj_rows if r["Readiness %"] < 80)
+
+                c_kpi1.metric("Athletes Evaluated", len(team_cmj_rows))
+                c_kpi2.metric("Team Mean Wellness", f"{avg_team_readiness:.1f}%")
+                c_kpi3.metric("Optimal (>=90%)", peak_count)
+                c_kpi4.metric("Fatigued (<80%)", fatigue_count)
+
+                team_tbl_html = """<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px;"><thead><tr style="background:#4895DB; color:white;"><th style="width:60px;">Athlete</th><th style="text-align:left !important; padding-left:15px;">Name</th><th>Position</th><th>Wellness Score</th></tr></thead><tbody>"""
+                for _, row in cmj_team_df.iterrows():
+                    team_tbl_html += f"""<tr>
+                        <td style="padding:6px;"><img src="{row['PhotoURL']}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
+                        <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px;">{row['Athlete']}</td>
+                        <td style="font-weight:600; color:#4B5563;">{row['Position']}</td>
+                        <td style="font-weight:900; font-size:15px; color:{row['Status_Color']};">{row['Readiness %']}%</td>
+                    </tr>"""
+                team_tbl_html += "</tbody></table>"
+                st.markdown(team_tbl_html, unsafe_allow_html=True)
+            else:
+                st.info(f"No Countermovement Jump testing records logged on {sel_team_cmj_date}.")
 
 
 # ==========================================
