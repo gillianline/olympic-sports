@@ -673,7 +673,7 @@ with testing_tab_intake:
             ]
             final_cols = [c for c in target_cols if c in df_display.columns]
             df_final = df_display[final_cols].copy()
-            df_final = df_final.replace(["N/A", ""], pd.NA)
+            df_final = df_final.replace(["N/A", "NaN", "nan", ""], pd.NA)
             df_final = df_final.dropna(axis=1, how='all').fillna("")
             st.markdown(render_vball_table(df_final), unsafe_allow_html=True)
 
