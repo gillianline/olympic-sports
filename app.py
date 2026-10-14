@@ -5,7 +5,7 @@ import streamlit.components.v1 as components
 from datetime import datetime
 
 # Set page layout to wide to match typical testing dashboards
-st.set_page_config(page_title="Soccer Testing Dashboard", layout="wide")
+st.set_page_config(page_title="Testing Dashboard", layout="wide")
 
 LOCKED_CONFIG = {"displayModeBar": False}
 
