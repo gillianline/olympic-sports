@@ -108,7 +108,7 @@ except Exception as e:
 # ==========================================
 # 3. DASHBOARD UI & SIDEBAR
 # ==========================================
-st.title("Soccer Testing Dashboard")
+st.title("Testing Dashboard")
 st.markdown("---")
 
 # 1. Season Filter (Moved to Main Page)
