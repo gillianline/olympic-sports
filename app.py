@@ -13,32 +13,40 @@ LOCKED_CONFIG = {"displayModeBar": False}
 # 1. PASSWORD PROTECTION LOGIC
 # ==========================================
 def check_password():
-    """Returns `True` if the user entered the correct password."""
-    def password_entered():
-        if st.session_state["password"] == st.secrets["password"]:
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Remove password from session state for security
-        else:
-            st.session_state["password_correct"] = False
-
+    """Returns `True` if the user entered the correct password for their sport."""
     if "password_correct" not in st.session_state:
-        # First run, show inputs for password.
+        st.session_state["password_correct"] = False
+
+    if not st.session_state["password_correct"]:
         st.title("Dashboard Login")
-        st.text_input("Enter Password", type="password", on_change=password_entered, key="password")
+        
+        # User selects their sport
+        sport_options = ["Soccer", "Dive", "Golf", "Swim", "Track & Field", "Cross Country"]
+        selected_sport = st.selectbox("Select Your Team", sport_options, key="login_sport")
+        
+        def password_entered():
+            # Check the expected password from secrets.toml [passwords] section
+            expected_password = st.secrets["passwords"].get(st.session_state["login_sport"])
+            
+            if expected_password and st.session_state["password_input"] == expected_password:
+                st.session_state["password_correct"] = True
+                st.session_state["logged_in_sport"] = st.session_state["login_sport"]
+                del st.session_state["password_input"]  # Clean up for security
+            else:
+                st.session_state["password_correct"] = False
+                st.session_state["password_error"] = True
+
+        st.text_input("Enter Password", type="password", on_change=password_entered, key="password_input")
+        
+        if st.session_state.get("password_error"):
+            st.error("Password incorrect. Please try again.")
         return False
-    elif not st.session_state["password_correct"]:
-        # Password incorrect, show input + error.
-        st.title("Dashboard Login")
-        st.text_input("Enter Password", type="password", on_change=password_entered, key="password")
-        st.error("Password incorrect")
-        return False
-    
+        
     return True # Password correct!
 
 # Stop execution if password fails
 if not check_password():
     st.stop()
-
 # ==========================================
 # 2. LOAD SECRET DATA
 # ==========================================
@@ -121,16 +129,12 @@ if selected_season != "All Seasons" and 'Season' in filtered_roster.columns:
 # --- SIDEBAR FILTERS ---
 st.sidebar.header("Filter Options")
 
-# 2. Sport Filter
-if 'Sport' in filtered_roster.columns:
-    sports = filtered_roster['Sport'].dropna().astype(str).unique().tolist()
-    selected_sport = st.sidebar.selectbox("Select Sport", ["All Sports"] + sports)
-else:
-    selected_sport = "All Sports"
+# 2. Sport Filter (Locked to the logged-in sport)
+selected_sport = st.session_state.get("logged_in_sport", "Soccer")
+st.sidebar.markdown(f"**Current Team:** {selected_sport}")
 
-if selected_sport != "All Sports":
-    filtered_roster = filtered_roster[filtered_roster['Sport'].astype(str) == selected_sport]
-
+# Apply the logged-in sport filter
+filtered_roster = filtered_roster[filtered_roster['Sport'].astype(str) == selected_sport]
 
 # 3. Player Filter
 players = filtered_roster['Name'].dropna().astype(str).unique().tolist()
@@ -192,16 +196,17 @@ def render_vball_table(df):
 # 5. DATA PREPARATION FOR HUD
 # =========================================
 
-df_forceframe['Date'] = pd.to_datetime(df_forceframe['Date'], errors='coerce')
-df_forceframe['Date_Str'] = df_forceframe['Date'].dt.strftime("%m/%d/%y")
+# Use filtered_ff instead of df_forceframe so it obeys the sport filter
+filtered_ff['Date'] = pd.to_datetime(filtered_ff['Date'], errors='coerce')
+filtered_ff['Date_Str'] = filtered_ff['Date'].dt.strftime("%m/%d/%y")
 
-ankle_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Ankle', na=False, case=False)]
-knee_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Knee', na=False, case=False)]
-shoulder_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Shoulder', na=False, case=False)]
+ankle_data = filtered_ff[filtered_ff['Test'].astype(str).str.contains('Ankle', na=False, case=False)]
+knee_data = filtered_ff[filtered_ff['Test'].astype(str).str.contains('Knee', na=False, case=False)]
+shoulder_data = filtered_ff[filtered_ff['Test'].astype(str).str.contains('Shoulder', na=False, case=False)]
 
-hip_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip', na=False, case=False)]
-hip_ad_ab_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip AD/AB', na=False, case=False)]
-hip_ir_er_data = df_forceframe[df_forceframe['Test'].astype(str).str.contains('Hip IR/ER', na=False, case=False)]
+hip_data = filtered_ff[filtered_ff['Test'].astype(str).str.contains('Hip', na=False, case=False)]
+hip_ad_ab_data = filtered_ff[filtered_ff['Test'].astype(str).str.contains('Hip AD/AB', na=False, case=False)]
+hip_ir_er_data = filtered_ff[filtered_ff['Test'].astype(str).str.contains('Hip IR/ER', na=False, case=False)]
 
 # ---- BELT SQUAT DATA PREP ----
 if not filtered_bs.empty and 'Date' in filtered_bs.columns:
@@ -240,18 +245,44 @@ roster_players = filtered_roster['Name'].dropna().unique().tolist()
 # 6. DASHBOARD UI
 # ==========================================
 
-testing_tab_intake, testing_tab_cmj, testing_tab_wellness, testing_tab_overall = st.tabs(
-    ["Intake Assessment", "Jump Testing", "Wellness Score", "Overall Profile"]
+# Check if the logged-in sport actually has any intake assessment data
+has_any_intake = not (
+    ankle_data.empty and knee_data.empty and shoulder_data.empty and 
+    hip_data.empty and belt_squat_data.empty and nordic_data.empty and ash_data.empty
 )
+
+# Dynamically build the tab list
+tab_titles = []
+if has_any_intake:
+    tab_titles.append("Intake Assessment")
+tab_titles.extend(["Jump Testing", "Wellness Score", "Overall Profile"])
+
+# Create tabs
+tabs = st.tabs(tab_titles)
+
+# Assign tabs dynamically based on whether Intake is present
+t_idx = 0
+if has_any_intake:
+    testing_tab_intake = tabs[t_idx]
+    t_idx += 1
+else:
+    testing_tab_intake = None
+
+testing_tab_cmj = tabs[t_idx]; t_idx += 1
+testing_tab_wellness = tabs[t_idx]; t_idx += 1
+testing_tab_overall = tabs[t_idx]
+
 
 # ==========================================
 # SECTION 5A: INTAKE ASSESSMENT
 # ==========================================
-with testing_tab_intake:
-    st.markdown(
-        f"<h3 style='color:#1D1D1F; font-weight:900; text-transform:uppercase;'>Athlete Intake Assessment ({season_label})</h3>",
-        unsafe_allow_html=True,
-    )
+if testing_tab_intake:
+    with testing_tab_intake:
+        # Keep EVERYTHING currently inside your Intake Assessment section right here...
+        st.markdown(
+            f"<h3 style='color:#1D1D1F; font-weight:900; text-transform:uppercase;'>Athlete Intake Assessment ({season_label})</h3>",
+            unsafe_allow_html=True,
+        )
     c_int_ath, _ = st.columns([2, 2])
     with c_int_ath:
         selected_intake_athlete = st.selectbox(
