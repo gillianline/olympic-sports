@@ -258,560 +258,548 @@ has_any_intake = not (
 )
 
 # Dynamically build the tab list
-tab_titles = []
 if has_any_intake:
-    tab_titles.append("Intake Assessment")
-tab_titles.extend(["Jump Testing", "Wellness Score", "Overall Profile"])
-
-# Create tabs
-tabs = st.tabs(tab_titles)
-
-# Assign tabs dynamically based on whether Intake is present
-t_idx = 0
-if has_any_intake:
-    testing_tab_intake = tabs[t_idx]
-    t_idx += 1
+    testing_tab_intake, testing_tab_cmj, testing_tab_wellness, testing_tab_overall = st.tabs(
+        ["Intake Assessment", "Jump Testing", "Wellness Score", "Overall Profile"]
+    )
 else:
+    testing_tab_cmj, testing_tab_wellness, testing_tab_overall = st.tabs(
+        ["Jump Testing", "Wellness Score", "Overall Profile"]
+    )
     testing_tab_intake = None
-
-testing_tab_cmj = tabs[t_idx]; t_idx += 1
-testing_tab_wellness = tabs[t_idx]; t_idx += 1
-testing_tab_overall = tabs[t_idx]
-
 
 # ==========================================
 # SECTION 5A: INTAKE ASSESSMENT
 # ==========================================
-if testing_tab_intake:
+if testing_tab_intake is not None:
     with testing_tab_intake:
-        # Keep EVERYTHING currently inside your Intake Assessment section right here...
         st.markdown(
             f"<h3 style='color:#1D1D1F; font-weight:900; text-transform:uppercase;'>Athlete Intake Assessment ({season_label})</h3>",
             unsafe_allow_html=True,
         )
-    c_int_ath, _ = st.columns([2, 2])
-    with c_int_ath:
-        selected_intake_athlete = st.selectbox(
-            "Select Athlete for Intake Assessment",
-            roster_players,
-            key=f"intake_ath_select_{season_key}",
-        )
+        c_int_ath, _ = st.columns([2, 2])
+        with c_int_ath:
+            selected_intake_athlete = st.selectbox(
+                "Select Athlete for Intake Assessment",
+                roster_players,
+                key=f"intake_ath_select_{season_key}",
+            )
 
-    calf_ath = ankle_data[ankle_data["Name"] == selected_intake_athlete].sort_values("Date") if not ankle_data.empty and "Name" in ankle_data.columns else pd.DataFrame()
-    hip_ath = hip_data[hip_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_data.empty and "Name" in hip_data.columns else pd.DataFrame()
-    sh_ath = knee_data[knee_data["Name"] == selected_intake_athlete].sort_values("Date") if not knee_data.empty and "Name" in knee_data.columns else pd.DataFrame()
-    nord_ath = nordic_data[nordic_data["Name"] == selected_intake_athlete].sort_values("Date") if not nordic_data.empty and "Name" in nordic_data.columns else pd.DataFrame()
-    bs_ath = belt_squat_data[belt_squat_data["Name"] == selected_intake_athlete].sort_values("Date") if not belt_squat_data.empty and "Name" in belt_squat_data.columns else pd.DataFrame()
-    dj_ath_intake = dj_data[dj_data["Name"] == selected_intake_athlete].sort_values("Date") if not dj_data.empty and "Name" in dj_data.columns else pd.DataFrame()
-    ash_ath_intake = ash_data[ash_data["Name"] == selected_intake_athlete].sort_values("Date") if not ash_data.empty and "Name" in ash_data.columns else pd.DataFrame()
+        calf_ath = ankle_data[ankle_data["Name"] == selected_intake_athlete].sort_values("Date") if not ankle_data.empty and "Name" in ankle_data.columns else pd.DataFrame()
+        hip_ath = hip_data[hip_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_data.empty and "Name" in hip_data.columns else pd.DataFrame()
+        sh_ath = knee_data[knee_data["Name"] == selected_intake_athlete].sort_values("Date") if not knee_data.empty and "Name" in knee_data.columns else pd.DataFrame()
+        nord_ath = nordic_data[nordic_data["Name"] == selected_intake_athlete].sort_values("Date") if not nordic_data.empty and "Name" in nordic_data.columns else pd.DataFrame()
+        bs_ath = belt_squat_data[belt_squat_data["Name"] == selected_intake_athlete].sort_values("Date") if not belt_squat_data.empty and "Name" in belt_squat_data.columns else pd.DataFrame()
+        dj_ath_intake = dj_data[dj_data["Name"] == selected_intake_athlete].sort_values("Date") if not dj_data.empty and "Name" in dj_data.columns else pd.DataFrame()
+        ash_ath_intake = ash_data[ash_data["Name"] == selected_intake_athlete].sort_values("Date") if not ash_data.empty and "Name" in ash_data.columns else pd.DataFrame()
 
-    has_data = not (calf_ath.empty and hip_ath.empty and sh_ath.empty and nord_ath.empty and bs_ath.empty and dj_ath_intake.empty and ash_ath_intake.empty)
+        has_data = not (calf_ath.empty and hip_ath.empty and sh_ath.empty and nord_ath.empty and bs_ath.empty and dj_ath_intake.empty and ash_ath_intake.empty)
 
-    def render_val_with_arrow(current, initial, fmt="{:.1f}", unit=""):
-        if initial == 0 or pd.isna(initial) or pd.isna(current):
-            return f"{fmt.format(current) if pd.notna(current) else 0}{unit}"
-        diff = current - initial
-        pct = (diff / initial) * 100
-        arrow = "↑" if diff >= 0 else "↓"
-        color = "#28a745" if diff >= 0 else "#dc3545"
-        return f"{fmt.format(current)}{unit} <span style='color:{color}; font-size:11px; font-weight:bold;'>({arrow}{abs(pct):.1f}%)</span>"
+        def render_val_with_arrow(current, initial, fmt="{:.1f}", unit=""):
+            if initial == 0 or pd.isna(initial) or pd.isna(current):
+                return f"{fmt.format(current) if pd.notna(current) else 0}{unit}"
+            diff = current - initial
+            pct = (diff / initial) * 100
+            arrow = "↑" if diff >= 0 else "↓"
+            color = "#28a745" if diff >= 0 else "#dc3545"
+            return f"{fmt.format(current)}{unit} <span style='color:{color}; font-size:11px; font-weight:bold;'>({arrow}{abs(pct):.1f}%)</span>"
 
-    def get_peak_and_recent_row(df_sub, l_col, r_col):
-        if df_sub.empty or not l_col or not r_col:
-            return (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)
+        def get_peak_and_recent_row(df_sub, l_col, r_col):
+            if df_sub.empty or not l_col or not r_col:
+                return (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)
         
-        df_calc = df_sub.copy()
-        df_calc["L_Val"] = pd.to_numeric(df_calc[l_col], errors="coerce").fillna(0.0)
-        df_calc["R_Val"] = pd.to_numeric(df_calc[r_col], errors="coerce").fillna(0.0)
-        df_calc["Max_Val"] = df_calc[["L_Val", "R_Val"]].max(axis=1)
+            df_calc = df_sub.copy()
+            df_calc["L_Val"] = pd.to_numeric(df_calc[l_col], errors="coerce").fillna(0.0)
+            df_calc["R_Val"] = pd.to_numeric(df_calc[r_col], errors="coerce").fillna(0.0)
+            df_calc["Max_Val"] = df_calc[["L_Val", "R_Val"]].max(axis=1)
         
-        valid_rows = df_calc[df_calc["Max_Val"] > 0]
-        if valid_rows.empty:
-            return (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)
+            valid_rows = df_calc[df_calc["Max_Val"] > 0]
+            if valid_rows.empty:
+                return (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)
         
-        peak_row = valid_rows.sort_values("Max_Val", ascending=False).iloc[0]
-        max_L, max_R = peak_row["L_Val"], peak_row["R_Val"]
+            peak_row = valid_rows.sort_values("Max_Val", ascending=False).iloc[0]
+            max_L, max_R = peak_row["L_Val"], peak_row["R_Val"]
         
-        recent_row = valid_rows.sort_values("Date", ascending=True).iloc[-1]
-        rec_L, rec_R = recent_row["L_Val"], recent_row["R_Val"]
+            recent_row = valid_rows.sort_values("Date", ascending=True).iloc[-1]
+            rec_L, rec_R = recent_row["L_Val"], recent_row["R_Val"]
         
-        init_row = valid_rows.sort_values("Date", ascending=True).iloc[0]
-        init_L, init_R = init_row["L_Val"], init_row["R_Val"]
+            init_row = valid_rows.sort_values("Date", ascending=True).iloc[0]
+            init_L, init_R = init_row["L_Val"], init_row["R_Val"]
         
-        return (max_L, max_R), (rec_L, rec_R), (init_L, init_R)
+            return (max_L, max_R), (rec_L, rec_R), (init_L, init_R)
 
-    hud_col1, hud_col2 = st.columns([1.2, 1.8])
+        hud_col1, hud_col2 = st.columns([1.2, 1.8])
 
-    with hud_col1:
-        # Dynamic Anatomical SVG Pointers Based on Data Presence
-        node_6_svg = """
-        <!-- 6. Shoulder (ASH Test) - Right Side -->
-        <line x1="84" y1="44" x2="112" y2="44" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="84" cy="44" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="112" y="36" width="16" height="16" rx="4" fill="#4895DB" />
-        <text x="120" y="48" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">6</text>
-        """ if not ash_ath_intake.empty else ""
+        with hud_col1:
+            # Dynamic Anatomical SVG Pointers Based on Data Presence
+            node_6_svg = """
+            <!-- 6. Shoulder (ASH Test) - Right Side -->
+            <line x1="84" y1="44" x2="112" y2="44" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+            <circle cx="84" cy="44" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+            <rect x="112" y="36" width="16" height="16" rx="4" fill="#4895DB" />
+            <text x="120" y="48" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">6</text>
+            """ if not ash_ath_intake.empty else ""
 
-        node_1_svg = """
-        <!-- 1. Belt Squat (Core / Waist) - Right Side -->
-        <line x1="68" y1="84" x2="112" y2="84" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="68" cy="84" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="112" y="76" width="16" height="16" rx="4" fill="#FF8200" />
-        <text x="120" y="88" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">1</text>
-        """ if not bs_ath.empty else ""
+            node_1_svg = """
+            <!-- 1. Belt Squat (Core / Waist) - Right Side -->
+            <line x1="68" y1="84" x2="112" y2="84" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+            <circle cx="68" cy="84" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+            <rect x="112" y="76" width="16" height="16" rx="4" fill="#FF8200" />
+            <text x="120" y="88" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">1</text>
+            """ if not bs_ath.empty else ""
         
-        node_2_svg = """
-        <!-- 2. Hip (AD/AB) - Left Side -->
-        <line x1="50" y1="106" x2="24" y2="106" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="50" cy="106" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="8" y="98" width="16" height="16" rx="4" fill="#4895DB" />
-        <text x="16" y="110" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">2</text>
-        """ if not hip_ath.empty else ""
+            node_2_svg = """
+            <!-- 2. Hip (AD/AB) - Left Side -->
+            <line x1="50" y1="106" x2="24" y2="106" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+            <circle cx="50" cy="106" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+            <rect x="8" y="98" width="16" height="16" rx="4" fill="#4895DB" />
+            <text x="16" y="110" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">2</text>
+            """ if not hip_ath.empty else ""
         
-        node_4_svg = """
-        <!-- 4. Hamstring (NordBord) - Left Side -->
-        <line x1="52" y1="135" x2="24" y2="135" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="52" cy="135" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="8" y="127" width="16" height="16" rx="4" fill="#4895DB" />
-        <text x="16" y="139" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">4</text>
-        """ if not nord_ath.empty else ""
+            node_4_svg = """
+            <!-- 4. Hamstring (NordBord) - Left Side -->
+            <line x1="52" y1="135" x2="24" y2="135" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+            <circle cx="52" cy="135" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+            <rect x="8" y="127" width="16" height="16" rx="4" fill="#4895DB" />
+            <text x="16" y="139" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">4</text>
+            """ if not nord_ath.empty else ""
 
-        node_3_svg = """
-        <!-- 3. Knee (Ext/Flex) - Right Side -->
-        <line x1="82" y1="148" x2="112" y2="148" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="82" cy="148" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="112" y="140" width="16" height="16" rx="4" fill="#FF8200" />
-        <text x="120" y="152" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">3</text>
-        """ if not sh_ath.empty else ""
+            node_3_svg = """
+            <!-- 3. Knee (Ext/Flex) - Right Side -->
+            <line x1="82" y1="148" x2="112" y2="148" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+            <circle cx="82" cy="148" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+            <rect x="112" y="140" width="16" height="16" rx="4" fill="#FF8200" />
+            <text x="120" y="152" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">3</text>
+            """ if not sh_ath.empty else ""
         
-        node_5_svg = """
-        <!-- 5. Ankle - Right Side -->
-        <line x1="80" y1="185" x2="112" y2="185" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="80" cy="185" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="112" y="177" width="16" height="16" rx="4" fill="#FF8200" />
-        <text x="120" y="189" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">5</text>
-        """ if not calf_ath.empty else ""
+            node_5_svg = """
+            <!-- 5. Ankle - Right Side -->
+            <line x1="80" y1="185" x2="112" y2="185" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+            <circle cx="80" cy="185" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+            <rect x="112" y="177" width="16" height="16" rx="4" fill="#FF8200" />
+            <text x="120" y="189" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">5</text>
+            """ if not calf_ath.empty else ""
 
-        node_7_svg = """
-        <!-- 7. Drop Jump (Feet) - Left Side -->
-        <line x1="68" y1="208" x2="24" y2="208" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
-        <circle cx="68" cy="208" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
-        <rect x="8" y="200" width="16" height="16" rx="4" fill="#FF8200" />
-        <text x="16" y="212" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">7</text>
-        """ if not dj_ath_intake.empty else ""
+            node_7_svg = """
+            <!-- 7. Drop Jump (Feet) - Left Side -->
+            <line x1="68" y1="208" x2="24" y2="208" stroke="#FF8200" stroke-width="2" stroke-dasharray="2 2" />
+            <circle cx="68" cy="208" r="4" fill="#FF8200" stroke="#FFFFFF" stroke-width="1.2" />
+            <rect x="8" y="200" width="16" height="16" rx="4" fill="#FF8200" />
+            <text x="16" y="212" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">7</text>
+            """ if not dj_ath_intake.empty else ""
 
-        hud_svg_html = f"""
-        <div style="background:#FFFFFF; border-radius:16px; padding:16px; border:1px solid #E5E5E7; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
-            <div style="color:#1D1D1F; font-weight:800; font-size:13px; letter-spacing:1px; text-transform:uppercase; border-bottom:2px solid #FF8200; padding-bottom:6px; margin-bottom:12px;">ANATOMY LOCATION MAP</div>
-            <div style="position:relative; width:100%; height:460px; background:#FAFDFD; border-radius:12px; border:1px solid #D5E5E8; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                <svg viewBox="0 0 160 220" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%;">
-                    <defs>
-                        <linearGradient id="anatomicalBodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stop-color="#C5CACC" />
-                            <stop offset="25%" stop-color="#E8ECEE" />
-                            <stop offset="50%" stop-color="#F2F5F7" />
-                            <stop offset="75%" stop-color="#D0D5D8" />
-                            <stop offset="100%" stop-color="#9AA0A6" />
-                        </linearGradient>
-                    </defs>
-                    <ellipse cx="68" cy="214" rx="20" ry="3.5" fill="#000000" opacity="0.12" />
-                    <g stroke="#2C3036" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                        <ellipse cx="68" cy="17" rx="7" ry="9" fill="url(#anatomicalBodyGrad)" />
-                        <path d="M 65 25 L 63 33 M 71 25 L 73 33" stroke-width="1.2" />
-                        <path d="M 63 33 C 58 33, 48 36, 42 40 C 37 43, 36 50, 39 56 L 43 56 C 47 52, 49 46, 52 44 M 73 33 C 78 33, 88 36, 94 40 C 99 43, 100 50, 97 56 L 93 56 C 89 52, 87 46, 84 44" fill="url(#anatomicalBodyGrad)" />
-                        <path d="M 42 40 C 37 43, 35 52, 33 64 C 31 74, 29 82, 27 92 C 25 96, 23 100, 22 104 C 21 106, 23 107, 25 106 C 27 104, 28 98, 30 92 C 33 82, 36 74, 38 64 C 40 54, 42 48, 43 56 Z" fill="url(#anatomicalBodyGrad)" />
-                        <path d="M 22 104 C 20 106, 18 108, 17 110 M 23 105 C 21 108, 20 110, 19 112 M 24 105 C 23 108, 22 110, 21 112 M 25 104 C 25 107, 24 109, 23 111" fill="none" stroke-width="0.8" />
-                        <path d="M 94 40 C 99 43, 101 52, 103 64 C 105 74, 107 82, 109 92 C 111 96, 113 100, 114 104 C 115 106, 113 107, 111 106 C 109 104, 108 98, 106 92 C 103 82, 100 74, 98 64 C 96 54, 94 48, 93 56 Z" fill="url(#anatomicalBodyGrad)" />
-                        <path d="M 114 104 C 116 106, 118 108, 119 110 M 113 105 C 115 108, 116 110, 117 112 M 112 105 C 113 108, 114 110, 115 112 M 111 104 C 111 107, 112 109, 113 111" fill="none" stroke-width="0.8" />
-                        <path d="M 52 44 L 54 75 L 52 92 L 68 106 L 84 92 L 82 75 L 84 44 Z" fill="url(#anatomicalBodyGrad)" />
-                        <path d="M 52 92 C 50 105, 49 122, 53 138 C 55 144, 55 152, 54 162 C 52 175, 52 192, 54 205 L 48 210 L 58 210 L 59 203 C 60 190, 60 175, 60 162 C 60 152, 60 144, 62 138 C 66 122, 66 105, 68 106 Z" fill="url(#anatomicalBodyGrad)" />
-                        <path d="M 84 92 C 86 105, 87 122, 83 138 C 81 144, 81 152, 82 162 C 84 175, 84 192, 82 205 L 88 210 L 78 210 L 77 203 C 76 190, 76 175, 76 162 C 76 152, 76 144, 74 138 C 70 122, 70 105, 68 106 Z" fill="url(#anatomicalBodyGrad)" />
-                        <line x1="68" y1="8" x2="68" y2="211" stroke="#FF8200" stroke-width="1.3" />
-                        <line x1="51" y1="116" x2="85" y2="116" stroke="#D32F2F" stroke-width="1.1" />
-                        <line x1="55" y1="168" x2="81" y2="168" stroke="#D32F2F" stroke-width="1.1" />
-                    </g>
-                    {node_6_svg}
-                    {node_1_svg}
-                    {node_2_svg}
-                    {node_4_svg}
-                    {node_3_svg}
-                    {node_5_svg}
-                    {node_7_svg}
-                </svg>
+            hud_svg_html = f"""
+            <div style="background:#FFFFFF; border-radius:16px; padding:16px; border:1px solid #E5E5E7; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+                <div style="color:#1D1D1F; font-weight:800; font-size:13px; letter-spacing:1px; text-transform:uppercase; border-bottom:2px solid #FF8200; padding-bottom:6px; margin-bottom:12px;">ANATOMY LOCATION MAP</div>
+                <div style="position:relative; width:100%; height:460px; background:#FAFDFD; border-radius:12px; border:1px solid #D5E5E8; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                    <svg viewBox="0 0 160 220" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%;">
+                        <defs>
+                            <linearGradient id="anatomicalBodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#C5CACC" />
+                                <stop offset="25%" stop-color="#E8ECEE" />
+                                <stop offset="50%" stop-color="#F2F5F7" />
+                                <stop offset="75%" stop-color="#D0D5D8" />
+                                <stop offset="100%" stop-color="#9AA0A6" />
+                            </linearGradient>
+                        </defs>
+                        <ellipse cx="68" cy="214" rx="20" ry="3.5" fill="#000000" opacity="0.12" />
+                        <g stroke="#2C3036" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                            <ellipse cx="68" cy="17" rx="7" ry="9" fill="url(#anatomicalBodyGrad)" />
+                            <path d="M 65 25 L 63 33 M 71 25 L 73 33" stroke-width="1.2" />
+                            <path d="M 63 33 C 58 33, 48 36, 42 40 C 37 43, 36 50, 39 56 L 43 56 C 47 52, 49 46, 52 44 M 73 33 C 78 33, 88 36, 94 40 C 99 43, 100 50, 97 56 L 93 56 C 89 52, 87 46, 84 44" fill="url(#anatomicalBodyGrad)" />
+                            <path d="M 42 40 C 37 43, 35 52, 33 64 C 31 74, 29 82, 27 92 C 25 96, 23 100, 22 104 C 21 106, 23 107, 25 106 C 27 104, 28 98, 30 92 C 33 82, 36 74, 38 64 C 40 54, 42 48, 43 56 Z" fill="url(#anatomicalBodyGrad)" />
+                            <path d="M 22 104 C 20 106, 18 108, 17 110 M 23 105 C 21 108, 20 110, 19 112 M 24 105 C 23 108, 22 110, 21 112 M 25 104 C 25 107, 24 109, 23 111" fill="none" stroke-width="0.8" />
+                            <path d="M 94 40 C 99 43, 101 52, 103 64 C 105 74, 107 82, 109 92 C 111 96, 113 100, 114 104 C 115 106, 113 107, 111 106 C 109 104, 108 98, 106 92 C 103 82, 100 74, 98 64 C 96 54, 94 48, 93 56 Z" fill="url(#anatomicalBodyGrad)" />
+                            <path d="M 114 104 C 116 106, 118 108, 119 110 M 113 105 C 115 108, 116 110, 117 112 M 112 105 C 113 108, 114 110, 115 112 M 111 104 C 111 107, 112 109, 113 111" fill="none" stroke-width="0.8" />
+                            <path d="M 52 44 L 54 75 L 52 92 L 68 106 L 84 92 L 82 75 L 84 44 Z" fill="url(#anatomicalBodyGrad)" />
+                            <path d="M 52 92 C 50 105, 49 122, 53 138 C 55 144, 55 152, 54 162 C 52 175, 52 192, 54 205 L 48 210 L 58 210 L 59 203 C 60 190, 60 175, 60 162 C 60 152, 60 144, 62 138 C 66 122, 66 105, 68 106 Z" fill="url(#anatomicalBodyGrad)" />
+                            <path d="M 84 92 C 86 105, 87 122, 83 138 C 81 144, 81 152, 82 162 C 84 175, 84 192, 82 205 L 88 210 L 78 210 L 77 203 C 76 190, 76 175, 76 162 C 76 152, 76 144, 74 138 C 70 122, 70 105, 68 106 Z" fill="url(#anatomicalBodyGrad)" />
+                            <line x1="68" y1="8" x2="68" y2="211" stroke="#FF8200" stroke-width="1.3" />
+                            <line x1="51" y1="116" x2="85" y2="116" stroke="#D32F2F" stroke-width="1.1" />
+                            <line x1="55" y1="168" x2="81" y2="168" stroke="#D32F2F" stroke-width="1.1" />
+                        </g>
+                        {node_6_svg}
+                        {node_1_svg}
+                        {node_2_svg}
+                        {node_4_svg}
+                        {node_3_svg}
+                        {node_5_svg}
+                        {node_7_svg}
+                    </svg>
+                </div>
             </div>
-        </div>
-        """
-        components.html(hud_svg_html, height=520)
+            """
+            components.html(hud_svg_html, height=520)
 
-    with hud_col2:
-        st.markdown(
-            f"""
-            <style>
-            .hud-details-card {{ background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E5E5E7; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }}
-            .hud-header-title-light {{ color: #1D1D1F; font-weight: 800; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid #FF8200; padding-bottom: 6px; margin-bottom: 16px; }}
-            .hud-metric-row-light {{ background: #F8F9FA; border-left: 4px solid #FF8200; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; color: #1D1D1F; border: 1px solid #E5E5E7; border-left: 4px solid #FF8200; }}
-            .hud-metric-row-light-blue {{ background: #F8F9FA; border-left: 4px solid #4895DB; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; color: #1D1D1F; border: 1px solid #E5E5E7; border-left: 4px solid #4895DB; }}
-            .node-badge-orange {{ display: inline-block; width: 20px; height: 20px; background: #FF8200; color: #FFFFFF; font-weight: 900; font-size: 11px; border-radius: 4px; text-align: center; line-height: 20px; margin-right: 8px; }}
-            .node-badge-blue {{ display: inline-block; width: 20px; height: 20px; background: #4895DB; color: #FFFFFF; font-weight: 900; font-size: 11px; border-radius: 4px; text-align: center; line-height: 20px; margin-right: 8px; }}
-            </style>
-            <div class="hud-details-card">
-                <div class="hud-header-title-light">Location Assessment ({season_label})</div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with hud_col2:
+            st.markdown(
+                f"""
+                <style>
+                .hud-details-card {{ background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #E5E5E7; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }}
+                .hud-header-title-light {{ color: #1D1D1F; font-weight: 800; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid #FF8200; padding-bottom: 6px; margin-bottom: 16px; }}
+                .hud-metric-row-light {{ background: #F8F9FA; border-left: 4px solid #FF8200; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; color: #1D1D1F; border: 1px solid #E5E5E7; border-left: 4px solid #FF8200; }}
+                .hud-metric-row-light-blue {{ background: #F8F9FA; border-left: 4px solid #4895DB; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; color: #1D1D1F; border: 1px solid #E5E5E7; border-left: 4px solid #4895DB; }}
+                .node-badge-orange {{ display: inline-block; width: 20px; height: 20px; background: #FF8200; color: #FFFFFF; font-weight: 900; font-size: 11px; border-radius: 4px; text-align: center; line-height: 20px; margin-right: 8px; }}
+                .node-badge-blue {{ display: inline-block; width: 20px; height: 20px; background: #4895DB; color: #FFFFFF; font-weight: 900; font-size: 11px; border-radius: 4px; text-align: center; line-height: 20px; margin-right: 8px; }}
+                </style>
+                <div class="hud-details-card">
+                    <div class="hud-header-title-light">Location Assessment ({season_label})</div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-        if has_data:
-            # 6. ASH TEST (Matches Node 6 - Shoulders)
-            if not ash_ath_intake.empty:
-                iso_col = next((c for c in ash_ath_intake.columns if "isometric type" in c.lower()), None)
-                pos_col = next((c for c in ash_ath_intake.columns if "position" in c.lower()), None)
-                l_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(l)" in c.lower()), None)
-                r_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(r)" in c.lower()), None)
+            if has_data:
+                # 6. ASH TEST (Matches Node 6 - Shoulders)
+                if not ash_ath_intake.empty:
+                    iso_col = next((c for c in ash_ath_intake.columns if "isometric type" in c.lower()), None)
+                    pos_col = next((c for c in ash_ath_intake.columns if "position" in c.lower()), None)
+                    l_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(l)" in c.lower()), None)
+                    r_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(r)" in c.lower()), None)
 
-                if iso_col and pos_col and l_col and r_col:
-                    ash_ath_intake_clean = ash_ath_intake.copy()
-                    ash_ath_intake_clean[pos_col] = ash_ath_intake_clean[pos_col].fillna("None").replace("", "None")
+                    if iso_col and pos_col and l_col and r_col:
+                        ash_ath_intake_clean = ash_ath_intake.copy()
+                        ash_ath_intake_clean[pos_col] = ash_ath_intake_clean[pos_col].fillna("None").replace("", "None")
                     
-                    combos = ash_ath_intake_clean[[iso_col, pos_col]].drop_duplicates().sort_values(by=[iso_col, pos_col])
+                        combos = ash_ath_intake_clean[[iso_col, pos_col]].drop_duplicates().sort_values(by=[iso_col, pos_col])
                     
-                    ash_html = ""
-                    date_str = format_date_clean(ash_ath_intake.sort_values("Date").iloc[-1].get("Date"))
+                        ash_html = ""
+                        date_str = format_date_clean(ash_ath_intake.sort_values("Date").iloc[-1].get("Date"))
 
-                    for _, row in combos.iterrows():
-                        itype = row[iso_col]
-                        ipos = row[pos_col]
-                        sub_df = ash_ath_intake_clean[(ash_ath_intake_clean[iso_col] == itype) & (ash_ath_intake_clean[pos_col] == ipos)]
+                        for _, row in combos.iterrows():
+                            itype = row[iso_col]
+                            ipos = row[pos_col]
+                            sub_df = ash_ath_intake_clean[(ash_ath_intake_clean[iso_col] == itype) & (ash_ath_intake_clean[pos_col] == ipos)]
                         
-                        (maxL, maxR), (recL, recR), _ = get_peak_and_recent_row(sub_df, l_col, r_col)
+                            (maxL, maxR), (recL, recR), _ = get_peak_and_recent_row(sub_df, l_col, r_col)
                         
-                        divider = '<div style="margin-top:6px; margin-bottom:6px; border-bottom:1px solid #D5E5E8;"></div>' if ash_html != "" else ""
-                        ash_html += f"{divider}<b>{itype} ({ipos}):</b> Max L {maxL:.1f}N | R {maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(recL, maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(recR, maxR, '{:.1f}', 'N')}<br>"
+                            divider = '<div style="margin-top:6px; margin-bottom:6px; border-bottom:1px solid #D5E5E8;"></div>' if ash_html != "" else ""
+                            ash_html += f"{divider}<b>{itype} ({ipos}):</b> Max L {maxL:.1f}N | R {maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(recL, maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(recR, maxR, '{:.1f}', 'N')}<br>"
                 
-                    if ash_html != "":
+                        if ash_html != "":
+                            st.markdown(
+                                f"""
+                                <div class="hud-metric-row-light-blue">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                        <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">6</span>ASH</span>
+                                        <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+                                    </div>
+                                    <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
+                                        {ash_html}
+                                    </div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+
+                # 1. BELT SQUAT (Matches Node 1 - Core/Waist)
+                if not bs_ath.empty:
+                    f_c = next((c for c in bs_ath.columns if "peak vertical force" in c.lower() or "force" in c.lower()), None)
+                    if f_c:
+                        bs_ath["PVF_Calc"] = pd.to_numeric(bs_ath[f_c].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce").fillna(0.0)
+                        peak_bs_val = bs_ath["PVF_Calc"].max()
+                        rec_bs_val = bs_ath.sort_values("Date").iloc[-1]["PVF_Calc"]
+                        date_str = format_date_clean(bs_ath.sort_values("Date").iloc[-1].get("Date"))
+
                         st.markdown(
                             f"""
-                            <div class="hud-metric-row-light-blue">
+                            <div class="hud-metric-row-light">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                    <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">6</span>ASH</span>
+                                    <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-orange">1</span>HARNESS BELT SQUAT</span>
                                     <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
                                 </div>
                                 <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                                    {ash_html}
+                                    <b>Peak Vertical Force:</b> Max {peak_bs_val:.1f}N &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(rec_bs_val, peak_bs_val, '{:.1f}', 'N')}
                                 </div>
                             </div>
                             """,
                             unsafe_allow_html=True,
                         )
 
-            # 1. BELT SQUAT (Matches Node 1 - Core/Waist)
-            if not bs_ath.empty:
-                f_c = next((c for c in bs_ath.columns if "peak vertical force" in c.lower() or "force" in c.lower()), None)
-                if f_c:
-                    bs_ath["PVF_Calc"] = pd.to_numeric(bs_ath[f_c].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce").fillna(0.0)
-                    peak_bs_val = bs_ath["PVF_Calc"].max()
-                    rec_bs_val = bs_ath.sort_values("Date").iloc[-1]["PVF_Calc"]
-                    date_str = format_date_clean(bs_ath.sort_values("Date").iloc[-1].get("Date"))
+                # 2. HIP (Matches Node 2 - Hips)
+                if not hip_ath.empty:
+                    l_col = next((c for c in hip_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
+                    r_col = next((c for c in hip_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
+                
+                    dir_col = next((c for c in hip_ath.columns if "direction" in c.lower()), None)
+                    if not dir_col:
+                        dir_col = next((c for c in hip_ath.columns if "test" in c.lower()), None)
+                    
+                    pos_col = next((c for c in hip_ath.columns if "position" in c.lower()), None)
+
+                    hip_ad = hip_ath[hip_ath[dir_col].astype(str).str.contains("Adduction", case=False, na=False)] if dir_col else hip_ath
+                    hip_ab = hip_ath[hip_ath[dir_col].astype(str).str.contains("Abduction", case=False, na=False)] if dir_col else hip_ath
+
+                    if pos_col:
+                        ad_sup = hip_ad[hip_ad[pos_col].astype(str).str.contains("Supine", case=False, na=False)]
+                        ab_sup = hip_ab[hip_ab[pos_col].astype(str).str.contains("Supine", case=False, na=False)]
+                        ad_45 = hip_ad[hip_ad[pos_col].astype(str).str.contains("45", case=False, na=False)]
+                        ab_45 = hip_ab[hip_ab[pos_col].astype(str).str.contains("45", case=False, na=False)]
+                    else:
+                        ad_sup, ab_sup, ad_45, ab_45 = hip_ad, hip_ab, pd.DataFrame(), pd.DataFrame()
+
+                    (ad_sup_maxL, ad_sup_maxR), (ad_sup_recL, ad_sup_recR), _ = get_peak_and_recent_row(ad_sup, l_col, r_col)
+                    (ab_sup_maxL, ab_sup_maxR), (ab_sup_recL, ab_sup_recR), _ = get_peak_and_recent_row(ab_sup, l_col, r_col)
+                    (ad_45_maxL, ad_45_maxR), (ad_45_recL, ad_45_recR), _ = get_peak_and_recent_row(ad_45, l_col, r_col)
+                    (ab_45_maxL, ab_45_maxR), (ab_45_recL, ab_45_recR), _ = get_peak_and_recent_row(ab_45, l_col, r_col)
+                
+                    date_str = format_date_clean(hip_ath.sort_values("Date").iloc[-1].get("Date")) if not hip_ath.empty else "N/A"
+
+                    supine_html = ""
+                    if not ad_sup.empty or not ab_sup.empty:
+                        supine_html = f"<b>Adduction (Supine Knee):</b> Max L {ad_sup_maxL:.1f}N | R {ad_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_sup_recL, ad_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_sup_recR, ad_sup_maxR, '{:.1f}', 'N')}<br><b>Abduction (Supine Knee):</b> Max L {ab_sup_maxL:.1f}N | R {ab_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_sup_recL, ab_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_sup_recR, ab_sup_maxR, '{:.1f}', 'N')}"
+                
+                    forty_five_html = ""
+                    if not ad_45.empty or not ab_45.empty:
+                        divider = '<div style="margin-top:6px; margin-bottom:6px; border-bottom:1px solid #D5E5E8;"></div>' if supine_html else ''
+                        forty_five_html = f"{divider}<b>Adduction (45°):</b> Max L {ad_45_maxL:.1f}N | R {ad_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_45_recL, ad_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_45_recR, ad_45_maxR, '{:.1f}', 'N')}<br><b>Abduction (45°):</b> Max L {ab_45_maxL:.1f}N | R {ab_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_45_recL, ab_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_45_recR, ab_45_maxR, '{:.1f}', 'N')}"
+
+                    st.markdown(
+                        f"""<div class="hud-metric-row-light-blue">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+    <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">2</span>HIP ADDUCTION & ABDUCTION</span>
+    <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+    </div>
+    <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
+    {supine_html}{forty_five_html}
+    </div>
+    </div>""",
+                        unsafe_allow_html=True,
+                    )
+                
+                # 3. KNEE (Matches Node 3 - Knees)
+                if not sh_ath.empty:
+                    l_col = next((c for c in sh_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
+                    r_col = next((c for c in sh_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
+                    dir_c = next((c for c in sh_ath.columns if "direction" in c.lower() or "test" in c.lower()), None)
+                    knee_ext = sh_ath[sh_ath[dir_c].astype(str).str.contains("Extension", case=False, na=False)] if dir_c else sh_ath
+                    knee_flx = sh_ath[sh_ath[dir_c].astype(str).str.contains("Flexion", case=False, na=False)] if dir_c else sh_ath
+
+                    (ke_maxL, ke_maxR), (ke_recL, ke_recR), (_, _) = get_peak_and_recent_row(knee_ext, l_col, r_col)
+                    (kf_maxL, kf_maxR), (kf_recL, kf_recR), (_, _) = get_peak_and_recent_row(knee_flx, l_col, r_col)
+                    latest_date_str = format_date_clean(knee_ext.sort_values("Date").iloc[-1].get("Date")) if not knee_ext.empty else "N/A"
 
                     st.markdown(
                         f"""
                         <div class="hud-metric-row-light">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-orange">1</span>HARNESS BELT SQUAT</span>
-                                <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+                                <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-orange">3</span>KNEE EXTENSION & FLEXION</span>
+                                <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {latest_date_str}</span>
                             </div>
                             <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                                <b>Peak Vertical Force:</b> Max {peak_bs_val:.1f}N &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(rec_bs_val, peak_bs_val, '{:.1f}', 'N')}
+                                <b>Extension:</b> Max L {ke_maxL:.1f}N | R {ke_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ke_recL, ke_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ke_recR, ke_maxR, '{:.1f}', 'N')}<br>
+                                <b>Flexion:</b> Max L {kf_maxL:.1f}N | R {kf_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(kf_recL, kf_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(kf_recR, kf_maxR, '{:.1f}', 'N')}
                             </div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
 
-            # 2. HIP (Matches Node 2 - Hips)
-            if not hip_ath.empty:
-                l_col = next((c for c in hip_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
-                r_col = next((c for c in hip_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
+                # 4. NORDBORD HAMSTRING (Matches Node 4 - Back of Thigh)
+                if not nord_ath.empty:
+                    l_col = next((c for c in nord_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
+                    r_col = next((c for c in nord_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
+                    (nord_maxL, nord_maxR), (nord_recL, nord_recR), (_, _) = get_peak_and_recent_row(nord_ath, l_col, r_col)
+                    date_str = format_date_clean(nord_ath.sort_values("Date").iloc[-1].get("Date")) if not nord_ath.empty else "N/A"
+
+                    st.markdown(
+                        f"""
+                        <div class="hud-metric-row-light-blue">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">4</span>NORDBORD HAMSTRING</span>
+                                <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+                            </div>
+                            <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
+                                <b>Peak Force:</b> L {nord_maxL:.1f}N | R {nord_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(nord_recL, nord_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(nord_recR, nord_maxR, '{:.1f}', 'N')}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                # 5. ANKLE (Matches Node 5 - Lower Calf/Ankle)
+                if not calf_ath.empty:
+                    l_col = next((c for c in calf_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
+                    r_col = next((c for c in calf_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
+                    (ank_maxL, ank_maxR), (ank_recL, ank_recR), (_, _) = get_peak_and_recent_row(calf_ath, l_col, r_col)
+                    date_str = format_date_clean(calf_ath.sort_values("Date").iloc[-1].get("Date")) if not calf_ath.empty else "N/A"
+
+                    st.markdown(
+                        f"""
+                        <div class="hud-metric-row-light">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-orange">5</span>ANKLE PLANTAR FLEXION</span>
+                                <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+                            </div>
+                            <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
+                                <b>Max Force:</b> L {ank_maxL:.1f}N | R {ank_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ank_recL, ank_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ank_recR, ank_maxR, '{:.1f}', 'N')}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                # 7. DROP JUMP (Matches Node 7 - Feet/Ground)
+                if not dj_ath_intake.empty:
+                    dj_jh_col = next((c for c in dj_ath_intake.columns if "jump height" in c.lower()), None)
+                    dj_rsi_col = next((c for c in dj_ath_intake.columns if "rsi" in c.lower()), None)
                 
-                dir_col = next((c for c in hip_ath.columns if "direction" in c.lower()), None)
-                if not dir_col:
-                    dir_col = next((c for c in hip_ath.columns if "test" in c.lower()), None)
+                    dj_jh_max = pd.to_numeric(dj_ath_intake[dj_jh_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce").max() if dj_jh_col else 0
+                    dj_jh_rec = pd.to_numeric(dj_ath_intake.sort_values("Date").iloc[-1].get(dj_jh_col, 0), errors="coerce") if dj_jh_col else 0
                     
-                pos_col = next((c for c in hip_ath.columns if "position" in c.lower()), None)
+                    dj_rsi_max = pd.to_numeric(dj_ath_intake[dj_rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce").max() if dj_rsi_col else 0
+                    dj_rsi_rec = pd.to_numeric(dj_ath_intake.sort_values("Date").iloc[-1].get(dj_rsi_col, 0), errors="coerce") if dj_rsi_col else 0
 
-                hip_ad = hip_ath[hip_ath[dir_col].astype(str).str.contains("Adduction", case=False, na=False)] if dir_col else hip_ath
-                hip_ab = hip_ath[hip_ath[dir_col].astype(str).str.contains("Abduction", case=False, na=False)] if dir_col else hip_ath
+                    date_str = format_date_clean(dj_ath_intake.sort_values("Date").iloc[-1].get("Date"))
 
-                if pos_col:
-                    ad_sup = hip_ad[hip_ad[pos_col].astype(str).str.contains("Supine", case=False, na=False)]
-                    ab_sup = hip_ab[hip_ab[pos_col].astype(str).str.contains("Supine", case=False, na=False)]
-                    ad_45 = hip_ad[hip_ad[pos_col].astype(str).str.contains("45", case=False, na=False)]
-                    ab_45 = hip_ab[hip_ab[pos_col].astype(str).str.contains("45", case=False, na=False)]
-                else:
-                    ad_sup, ab_sup, ad_45, ab_45 = hip_ad, hip_ab, pd.DataFrame(), pd.DataFrame()
-
-                (ad_sup_maxL, ad_sup_maxR), (ad_sup_recL, ad_sup_recR), _ = get_peak_and_recent_row(ad_sup, l_col, r_col)
-                (ab_sup_maxL, ab_sup_maxR), (ab_sup_recL, ab_sup_recR), _ = get_peak_and_recent_row(ab_sup, l_col, r_col)
-                (ad_45_maxL, ad_45_maxR), (ad_45_recL, ad_45_recR), _ = get_peak_and_recent_row(ad_45, l_col, r_col)
-                (ab_45_maxL, ab_45_maxR), (ab_45_recL, ab_45_recR), _ = get_peak_and_recent_row(ab_45, l_col, r_col)
-                
-                date_str = format_date_clean(hip_ath.sort_values("Date").iloc[-1].get("Date")) if not hip_ath.empty else "N/A"
-
-                supine_html = ""
-                if not ad_sup.empty or not ab_sup.empty:
-                    supine_html = f"<b>Adduction (Supine Knee):</b> Max L {ad_sup_maxL:.1f}N | R {ad_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_sup_recL, ad_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_sup_recR, ad_sup_maxR, '{:.1f}', 'N')}<br><b>Abduction (Supine Knee):</b> Max L {ab_sup_maxL:.1f}N | R {ab_sup_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_sup_recL, ab_sup_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_sup_recR, ab_sup_maxR, '{:.1f}', 'N')}"
-                
-                forty_five_html = ""
-                if not ad_45.empty or not ab_45.empty:
-                    divider = '<div style="margin-top:6px; margin-bottom:6px; border-bottom:1px solid #D5E5E8;"></div>' if supine_html else ''
-                    forty_five_html = f"{divider}<b>Adduction (45°):</b> Max L {ad_45_maxL:.1f}N | R {ad_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ad_45_recL, ad_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ad_45_recR, ad_45_maxR, '{:.1f}', 'N')}<br><b>Abduction (45°):</b> Max L {ab_45_maxL:.1f}N | R {ab_45_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ab_45_recL, ab_45_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ab_45_recR, ab_45_maxR, '{:.1f}', 'N')}"
-
-                st.markdown(
-                    f"""<div class="hud-metric-row-light-blue">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-<span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">2</span>HIP ADDUCTION & ABDUCTION</span>
-<span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
-</div>
-<div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-{supine_html}{forty_five_html}
-</div>
-</div>""",
-                    unsafe_allow_html=True,
-                )
-                
-            # 3. KNEE (Matches Node 3 - Knees)
-            if not sh_ath.empty:
-                l_col = next((c for c in sh_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
-                r_col = next((c for c in sh_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
-                dir_c = next((c for c in sh_ath.columns if "direction" in c.lower() or "test" in c.lower()), None)
-                knee_ext = sh_ath[sh_ath[dir_c].astype(str).str.contains("Extension", case=False, na=False)] if dir_c else sh_ath
-                knee_flx = sh_ath[sh_ath[dir_c].astype(str).str.contains("Flexion", case=False, na=False)] if dir_c else sh_ath
-
-                (ke_maxL, ke_maxR), (ke_recL, ke_recR), (_, _) = get_peak_and_recent_row(knee_ext, l_col, r_col)
-                (kf_maxL, kf_maxR), (kf_recL, kf_recR), (_, _) = get_peak_and_recent_row(knee_flx, l_col, r_col)
-                latest_date_str = format_date_clean(knee_ext.sort_values("Date").iloc[-1].get("Date")) if not knee_ext.empty else "N/A"
-
-                st.markdown(
-                    f"""
-                    <div class="hud-metric-row-light">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-orange">3</span>KNEE EXTENSION & FLEXION</span>
-                            <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {latest_date_str}</span>
+                    st.markdown(
+                        f"""
+                        <div class="hud-metric-row-light">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-orange">7</span>DROP JUMP</span>
+                                <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+                            </div>
+                            <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
+                                <b>Jump Height:</b> Max {dj_jh_max:.1f}cm &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(dj_jh_rec, dj_jh_max, '{:.1f}', 'cm')}<br>
+                                <b>RSI:</b> Max {dj_rsi_max:.2f} &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(dj_rsi_rec, dj_rsi_max, '{:.2f}', '')}
+                            </div>
                         </div>
-                        <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Extension:</b> Max L {ke_maxL:.1f}N | R {ke_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ke_recL, ke_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ke_recR, ke_maxR, '{:.1f}', 'N')}<br>
-                            <b>Flexion:</b> Max L {kf_maxL:.1f}N | R {kf_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(kf_recL, kf_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(kf_recR, kf_maxR, '{:.1f}', 'N')}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                        """,
+                        unsafe_allow_html=True,
+                    )
 
-            # 4. NORDBORD HAMSTRING (Matches Node 4 - Back of Thigh)
-            if not nord_ath.empty:
-                l_col = next((c for c in nord_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
-                r_col = next((c for c in nord_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
-                (nord_maxL, nord_maxR), (nord_recL, nord_recR), (_, _) = get_peak_and_recent_row(nord_ath, l_col, r_col)
-                date_str = format_date_clean(nord_ath.sort_values("Date").iloc[-1].get("Date")) if not nord_ath.empty else "N/A"
+            else:
+                st.info(f"No Intake Assessment records found for {selected_intake_athlete} in {season_label}.")
 
-                st.markdown(
-                    f"""
-                    <div class="hud-metric-row-light-blue">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">4</span>NORDBORD HAMSTRING</span>
-                            <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
-                        </div>
-                        <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Peak Force:</b> L {nord_maxL:.1f}N | R {nord_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(nord_recL, nord_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(nord_recR, nord_maxR, '{:.1f}', 'N')}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+            st.markdown("</div>", unsafe_allow_html=True)
 
-            # 5. ANKLE (Matches Node 5 - Lower Calf/Ankle)
+        st.divider()
+
+        if has_data:
+            st.markdown(f"### Intake Assessment Raw Logs for {selected_intake_athlete} ({season_label})")
+
+            def render_clean_log(df_sub, log_name):
+                df_display = df_sub.copy()
+                def get_movement(row):
+                    pos = row.get('Position')
+                    dir_ = row.get('Direction')
+                    test = row.get('Test')
+                    has_pos = pd.notna(pos) and str(pos).strip() != ""
+                    has_dir = pd.notna(dir_) and str(dir_).strip() != ""
+                    if has_pos and has_dir: return f"{pos} - {dir_}"
+                    elif has_pos: return pos
+                    elif has_dir: return f"{test} - {dir_}"
+                    else: return test
+
+                df_display['Position'] = df_display.apply(get_movement, axis=1)
+
+                target_cols = [
+                    "Date", "Position", "L Max Force (N)", "R Max Force (N)", 
+                    "Max Imbalance", "L Max Ratio", "R Max Ratio"
+                ]
+                final_cols = [c for c in target_cols if c in df_display.columns]
+                df_final = df_display[final_cols].copy()
+                df_final = df_final.replace(["N/A", "NaN", "nan", ""], pd.NA)
+                df_final = df_final.dropna(axis=1, how='all').fillna("")
+                st.markdown(render_vball_table(df_final), unsafe_allow_html=True)
+
+            if not ash_ath_intake.empty:
+                with st.expander("ASH Log", expanded=False):
+                    target_cols_ash = [
+                        "Date", "Test Type", "Isometric Type", "Position", 
+                        "Peak Vertical Force [N] (L)", "Peak Vertical Force [N] (R)", 
+                        "Peak Vertical Force [N] (Asym)(%)"
+                    ]
+                    final_cols_ash = [c for c in target_cols_ash if c in ash_ath_intake.columns]
+                    df_ash_display = ash_ath_intake[final_cols_ash].copy()
+                    if "Date" in df_ash_display.columns:
+                        df_ash_display["Date"] = pd.to_datetime(df_ash_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                    for col in df_ash_display.columns:
+                        if "Force" in col or "Asym" in col:
+                            df_ash_display[col] = pd.to_numeric(df_ash_display[col], errors="coerce").apply(lambda x: f"{x:.1f}" if pd.notna(x) else pd.NA)
+                    df_ash_display = df_ash_display.dropna(axis=1, how='all').fillna("-")
+                    st.dataframe(df_ash_display, use_container_width=True, hide_index=True)
+
             if not calf_ath.empty:
-                l_col = next((c for c in calf_ath.columns if "l max force" in c.lower() or "left max" in c.lower()), None)
-                r_col = next((c for c in calf_ath.columns if "r max force" in c.lower() or "right max" in c.lower()), None)
-                (ank_maxL, ank_maxR), (ank_recL, ank_recR), (_, _) = get_peak_and_recent_row(calf_ath, l_col, r_col)
-                date_str = format_date_clean(calf_ath.sort_values("Date").iloc[-1].get("Date")) if not calf_ath.empty else "N/A"
+                with st.expander("Ankle Plantar Flexion Log", expanded=False):
+                    render_clean_log(calf_ath, "Ankle Assessment")
 
-                st.markdown(
-                    f"""
-                    <div class="hud-metric-row-light">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-orange">5</span>ANKLE PLANTAR FLEXION</span>
-                            <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
-                        </div>
-                        <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Max Force:</b> L {ank_maxL:.1f}N | R {ank_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(ank_recL, ank_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(ank_recR, ank_maxR, '{:.1f}', 'N')}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+            if not sh_ath.empty:
+                with st.expander("Knee Extension / Flexion Log", expanded=False):
+                    render_clean_log(sh_ath, "Knee Assessment")
 
-            # 7. DROP JUMP (Matches Node 7 - Feet/Ground)
-            if not dj_ath_intake.empty:
-                dj_jh_col = next((c for c in dj_ath_intake.columns if "jump height" in c.lower()), None)
-                dj_rsi_col = next((c for c in dj_ath_intake.columns if "rsi" in c.lower()), None)
-                
-                dj_jh_max = pd.to_numeric(dj_ath_intake[dj_jh_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce").max() if dj_jh_col else 0
-                dj_jh_rec = pd.to_numeric(dj_ath_intake.sort_values("Date").iloc[-1].get(dj_jh_col, 0), errors="coerce") if dj_jh_col else 0
-                
-                dj_rsi_max = pd.to_numeric(dj_ath_intake[dj_rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce").max() if dj_rsi_col else 0
-                dj_rsi_rec = pd.to_numeric(dj_ath_intake.sort_values("Date").iloc[-1].get(dj_rsi_col, 0), errors="coerce") if dj_rsi_col else 0
+            hip_ad_ath = hip_ad_ab_data[hip_ad_ab_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_ad_ab_data.empty else pd.DataFrame()
+            if not hip_ad_ath.empty:
+                with st.expander("Hip AD/AB Log", expanded=False):
+                    render_clean_log(hip_ad_ath, "Hip AD/AB")
 
-                date_str = format_date_clean(dj_ath_intake.sort_values("Date").iloc[-1].get("Date"))
-
-                st.markdown(
-                    f"""
-                    <div class="hud-metric-row-light">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-orange">7</span>DROP JUMP</span>
-                            <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
-                        </div>
-                        <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
-                            <b>Jump Height:</b> Max {dj_jh_max:.1f}cm &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(dj_jh_rec, dj_jh_max, '{:.1f}', 'cm')}<br>
-                            <b>RSI:</b> Max {dj_rsi_max:.2f} &nbsp;→&nbsp; <b>Recent:</b> {render_val_with_arrow(dj_rsi_rec, dj_rsi_max, '{:.2f}', '')}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-        else:
-            st.info(f"No Intake Assessment records found for {selected_intake_athlete} in {season_label}.")
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.divider()
-
-    if has_data:
-        st.markdown(f"### Intake Assessment Raw Logs for {selected_intake_athlete} ({season_label})")
-
-        def render_clean_log(df_sub, log_name):
-            df_display = df_sub.copy()
-            def get_movement(row):
-                pos = row.get('Position')
-                dir_ = row.get('Direction')
-                test = row.get('Test')
-                has_pos = pd.notna(pos) and str(pos).strip() != ""
-                has_dir = pd.notna(dir_) and str(dir_).strip() != ""
-                if has_pos and has_dir: return f"{pos} - {dir_}"
-                elif has_pos: return pos
-                elif has_dir: return f"{test} - {dir_}"
-                else: return test
-
-            df_display['Position'] = df_display.apply(get_movement, axis=1)
-
-            target_cols = [
-                "Date", "Position", "L Max Force (N)", "R Max Force (N)", 
-                "Max Imbalance", "L Max Ratio", "R Max Ratio"
-            ]
-            final_cols = [c for c in target_cols if c in df_display.columns]
-            df_final = df_display[final_cols].copy()
-            df_final = df_final.replace(["N/A", "NaN", "nan", ""], pd.NA)
-            df_final = df_final.dropna(axis=1, how='all').fillna("")
-            st.markdown(render_vball_table(df_final), unsafe_allow_html=True)
-
-        if not ash_ath_intake.empty:
-            with st.expander("ASH Log", expanded=False):
-                target_cols_ash = [
-                    "Date", "Test Type", "Isometric Type", "Position", 
-                    "Peak Vertical Force [N] (L)", "Peak Vertical Force [N] (R)", 
-                    "Peak Vertical Force [N] (Asym)(%)"
-                ]
-                final_cols_ash = [c for c in target_cols_ash if c in ash_ath_intake.columns]
-                df_ash_display = ash_ath_intake[final_cols_ash].copy()
-                if "Date" in df_ash_display.columns:
-                    df_ash_display["Date"] = pd.to_datetime(df_ash_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
-                for col in df_ash_display.columns:
-                    if "Force" in col or "Asym" in col:
-                        df_ash_display[col] = pd.to_numeric(df_ash_display[col], errors="coerce").apply(lambda x: f"{x:.1f}" if pd.notna(x) else pd.NA)
-                df_ash_display = df_ash_display.dropna(axis=1, how='all').fillna("-")
-                st.dataframe(df_ash_display, use_container_width=True, hide_index=True)
-
-        if not calf_ath.empty:
-            with st.expander("Ankle Plantar Flexion Log", expanded=False):
-                render_clean_log(calf_ath, "Ankle Assessment")
-
-        if not sh_ath.empty:
-            with st.expander("Knee Extension / Flexion Log", expanded=False):
-                render_clean_log(sh_ath, "Knee Assessment")
-
-        hip_ad_ath = hip_ad_ab_data[hip_ad_ab_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_ad_ab_data.empty else pd.DataFrame()
-        if not hip_ad_ath.empty:
-            with st.expander("Hip AD/AB Log", expanded=False):
-                render_clean_log(hip_ad_ath, "Hip AD/AB")
-
-        hip_ir_ath = hip_ir_er_data[hip_ir_er_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_ir_er_data.empty else pd.DataFrame()
-        if not hip_ir_ath.empty:
-            with st.expander("Hip IR/ER Log", expanded=False):
-                render_clean_log(hip_ir_ath, "Hip IR/ER")
+            hip_ir_ath = hip_ir_er_data[hip_ir_er_data["Name"] == selected_intake_athlete].sort_values("Date") if not hip_ir_er_data.empty else pd.DataFrame()
+            if not hip_ir_ath.empty:
+                with st.expander("Hip IR/ER Log", expanded=False):
+                    render_clean_log(hip_ir_ath, "Hip IR/ER")
             
-        if not bs_ath.empty:
-            with st.expander("Isometric Belt Squat Log", expanded=False):
-                target_cols_bs = [
-                    "Test Type", "Date", "BW [KG]", "Peak Vertical Force [N]", 
-                    "Peak Vertical Force / BM [N/kg]", "RFD - 100ms [N/s]", 
-                    "Force at 100ms [N]", "Start Time to 80% Net Peak Force [s]"
-                ]
-                final_cols_bs = [c for c in target_cols_bs if c in bs_ath.columns]
-                df_bs_display = bs_ath[final_cols_bs].copy()
-                if "Date" in df_bs_display.columns:
-                    df_bs_display["Date"] = pd.to_datetime(df_bs_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
-                for col in df_bs_display.columns:
-                    if col not in ["Test Type", "Date"]:
-                        df_bs_display[col] = pd.to_numeric(df_bs_display[col], errors="coerce").apply(
-                            lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
-                        )
-                df_bs_display = df_bs_display.dropna(axis=1, how='all').fillna("-")
-                st.dataframe(df_bs_display, use_container_width=True, hide_index=True)
+            if not bs_ath.empty:
+                with st.expander("Isometric Belt Squat Log", expanded=False):
+                    target_cols_bs = [
+                        "Test Type", "Date", "BW [KG]", "Peak Vertical Force [N]", 
+                        "Peak Vertical Force / BM [N/kg]", "RFD - 100ms [N/s]", 
+                        "Force at 100ms [N]", "Start Time to 80% Net Peak Force [s]"
+                    ]
+                    final_cols_bs = [c for c in target_cols_bs if c in bs_ath.columns]
+                    df_bs_display = bs_ath[final_cols_bs].copy()
+                    if "Date" in df_bs_display.columns:
+                        df_bs_display["Date"] = pd.to_datetime(df_bs_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                    for col in df_bs_display.columns:
+                        if col not in ["Test Type", "Date"]:
+                            df_bs_display[col] = pd.to_numeric(df_bs_display[col], errors="coerce").apply(
+                                lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
+                            )
+                    df_bs_display = df_bs_display.dropna(axis=1, how='all').fillna("-")
+                    st.dataframe(df_bs_display, use_container_width=True, hide_index=True)
 
-        if not nord_ath.empty:
-            with st.expander("NordBord Hamstring Log", expanded=False):
-                target_cols_nb = [
-                    "Test", "Date", "L Max Force (N)", "R Max Force (N)", 
-                    "Max Imbalance (%)", "L Max Torque (Nm)", "R Max Torque (Nm)"
-                ]
-                final_cols_nb = [c for c in target_cols_nb if c in nord_ath.columns]
-                df_nb_display = nord_ath[final_cols_nb].copy()
-                if "Date" in df_nb_display.columns:
-                    df_nb_display["Date"] = pd.to_datetime(df_nb_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
-                for col in df_nb_display.columns:
-                    if col not in ["Test", "Date"]:
-                        df_nb_display[col] = pd.to_numeric(df_nb_display[col], errors="coerce").apply(
-                            lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
-                        )
-                df_nb_display = df_nb_display.dropna(axis=1, how='all').fillna("-")
-                st.dataframe(df_nb_display, use_container_width=True, hide_index=True)
+            if not nord_ath.empty:
+                with st.expander("NordBord Hamstring Log", expanded=False):
+                    target_cols_nb = [
+                        "Test", "Date", "L Max Force (N)", "R Max Force (N)", 
+                        "Max Imbalance (%)", "L Max Torque (Nm)", "R Max Torque (Nm)"
+                    ]
+                    final_cols_nb = [c for c in target_cols_nb if c in nord_ath.columns]
+                    df_nb_display = nord_ath[final_cols_nb].copy()
+                    if "Date" in df_nb_display.columns:
+                        df_nb_display["Date"] = pd.to_datetime(df_nb_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                    for col in df_nb_display.columns:
+                        if col not in ["Test", "Date"]:
+                            df_nb_display[col] = pd.to_numeric(df_nb_display[col], errors="coerce").apply(
+                                lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA
+                            )
+                    df_nb_display = df_nb_display.dropna(axis=1, how='all').fillna("-")
+                    st.dataframe(df_nb_display, use_container_width=True, hide_index=True)
                 
-        if not dj_ath_intake.empty:
-            with st.expander("Drop Jump Log", expanded=False):
-                target_cols_dj = ["Test Type", "Date", "BW [KG]", "Drop Height [cm]"]
-                dj_rsi_col = next((c for c in dj_ath_intake.columns if "rsi" in c.lower()), None)
-                dj_jh_col = next((c for c in dj_ath_intake.columns if "jump height" in c.lower()), None)
-                if dj_rsi_col: target_cols_dj.append(dj_rsi_col)
-                if dj_jh_col: target_cols_dj.append(dj_jh_col)
-                target_cols_dj.extend(["Contact Time [s]", "Effective Drop [cm]"])
+            if not dj_ath_intake.empty:
+                with st.expander("Drop Jump Log", expanded=False):
+                    target_cols_dj = ["Test Type", "Date", "BW [KG]", "Drop Height [cm]"]
+                    dj_rsi_col = next((c for c in dj_ath_intake.columns if "rsi" in c.lower()), None)
+                    dj_jh_col = next((c for c in dj_ath_intake.columns if "jump height" in c.lower()), None)
+                    if dj_rsi_col: target_cols_dj.append(dj_rsi_col)
+                    if dj_jh_col: target_cols_dj.append(dj_jh_col)
+                    target_cols_dj.extend(["Contact Time [s]", "Effective Drop [cm]"])
                 
-                final_cols_dj = [c for c in target_cols_dj if c in dj_ath_intake.columns]
-                df_dj_display = dj_ath_intake[final_cols_dj].copy()
+                    final_cols_dj = [c for c in target_cols_dj if c in dj_ath_intake.columns]
+                    df_dj_display = dj_ath_intake[final_cols_dj].copy()
                 
-                rename_map_dj = {}
-                if dj_jh_col: rename_map_dj[dj_jh_col] = "Jump Height (cm)"
-                if dj_rsi_col: rename_map_dj[dj_rsi_col] = "RSI [m/s]"
-                df_dj_display = df_dj_display.rename(columns=rename_map_dj)
+                    rename_map_dj = {}
+                    if dj_jh_col: rename_map_dj[dj_jh_col] = "Jump Height (cm)"
+                    if dj_rsi_col: rename_map_dj[dj_rsi_col] = "RSI [m/s]"
+                    df_dj_display = df_dj_display.rename(columns=rename_map_dj)
                 
-                if "Date" in df_dj_display.columns:
-                    df_dj_display["Date"] = pd.to_datetime(df_dj_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                    if "Date" in df_dj_display.columns:
+                        df_dj_display["Date"] = pd.to_datetime(df_dj_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
 
-                for col in df_dj_display.columns:
-                    if col not in ["Test Type", "Date"]:
-                        df_dj_display[col] = pd.to_numeric(df_dj_display[col], errors="coerce").apply(lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA)
+                    for col in df_dj_display.columns:
+                        if col not in ["Test Type", "Date"]:
+                            df_dj_display[col] = pd.to_numeric(df_dj_display[col], errors="coerce").apply(lambda x: f"{x:.2f}" if pd.notna(x) else pd.NA)
                 
-                df_dj_display = df_dj_display.dropna(axis=1, how='all').fillna("-")
-                st.dataframe(df_dj_display, use_container_width=True, hide_index=True)
+                    df_dj_display = df_dj_display.dropna(axis=1, how='all').fillna("-")
+                    st.dataframe(df_dj_display, use_container_width=True, hide_index=True)
 
 
 # ==========================================
