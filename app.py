@@ -25,7 +25,13 @@ def check_password():
         selected_sport = st.selectbox("Select Your Team", sport_options, key="login_sport")
         
         def password_entered():
-            # Check the expected password from secrets.toml [passwords] section
+            # Safely check if [passwords] exists to prevent KeyErrors
+            if "passwords" not in st.secrets:
+                st.session_state["password_correct"] = False
+                st.session_state["password_error"] = True
+                st.error("System Error: [passwords] section is missing from secrets.toml")
+                return
+
             expected_password = st.secrets["passwords"].get(st.session_state["login_sport"])
             
             if expected_password and st.session_state["password_input"] == expected_password:
