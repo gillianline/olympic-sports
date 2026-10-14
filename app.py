@@ -139,6 +139,14 @@ st.sidebar.header("Filter Options")
 selected_sport = st.session_state.get("logged_in_sport", "Soccer")
 st.sidebar.markdown(f"**Current Team:** {selected_sport}")
 
+# --- LOGOUT BUTTON ---
+if st.sidebar.button("Log Out"):
+    st.session_state["password_correct"] = False
+    if "logged_in_sport" in st.session_state:
+        del st.session_state["logged_in_sport"]
+    st.rerun() # Forces the app to instantly reload back to the login screen
+st.sidebar.markdown("---")
+
 # Apply the logged-in sport filter
 filtered_roster = filtered_roster[filtered_roster['Sport'].astype(str) == selected_sport]
 
