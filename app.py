@@ -13,13 +13,27 @@ st.set_page_config(page_title="Testing Dashboard", layout="wide")
 print_css = """
 <style>
 @media print {
-    /* Hide Streamlit UI elements: Sidebar, Header, Toolbar, Footer, AND TABS */
+    /* 1. Hide Sidebar, Header, Footer, and Toolbar */
     [data-testid="stSidebar"], 
     [data-testid="stHeader"], 
     [data-testid="stToolbar"], 
-    [data-baseweb="tab-list"], 
-    div[role="tablist"],
     footer {
+        display: none !important;
+    }
+    
+    /* 2. AGGRESSIVELY HIDE THE TABS NAVIGATION BAR */
+    /* Targets the new and old Streamlit tab containers */
+    [data-testid="stTabsNav"],
+    [data-testid="stTabs"] > div:first-child,
+    button[data-baseweb="tab"],
+    div[role="tablist"] {
+        display: none !important;
+    }
+
+    /* 3. OPTIONAL: Hide Dropdowns and Radio buttons on the printed page */
+    /* (Remove this section if you want to see what was selected on the printout) */
+    [data-testid="stSelectbox"],
+    [data-testid="stRadio"] {
         display: none !important;
     }
     
@@ -37,7 +51,7 @@ print_css = """
         page-break-inside: avoid !important;
     }
 
-    /* Force browsers to print background colors and SVGs (crucial for your anatomy HUD) */
+    /* Force browsers to print background colors and SVGs */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
