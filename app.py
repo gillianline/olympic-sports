@@ -7,8 +7,6 @@ from datetime import datetime
 # Set page layout to wide to match typical testing dashboards
 st.set_page_config(page_title="Testing Dashboard", layout="wide")
 
-LOCKED_CONFIG = {"displayModeBar": False}
-
 # ==========================================
 # PRINT & EXPORT STYLING
 # ==========================================
@@ -48,6 +46,9 @@ print_css = """
 </style>
 """
 st.markdown(print_css, unsafe_allow_html=True)
+
+LOCKED_CONFIG = {"displayModeBar": False}
+
 
 # ==========================================
 # 1. PASSWORD PROTECTION LOGIC
