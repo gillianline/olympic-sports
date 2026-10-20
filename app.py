@@ -15,10 +15,12 @@ LOCKED_CONFIG = {"displayModeBar": False}
 print_css = """
 <style>
 @media print {
-    /* Hide Streamlit UI elements we don't want on paper */
+    /* Hide Streamlit UI elements: Sidebar, Header, Toolbar, Footer, AND TABS */
     [data-testid="stSidebar"], 
     [data-testid="stHeader"], 
     [data-testid="stToolbar"], 
+    [data-baseweb="tab-list"], 
+    div[role="tablist"],
     footer {
         display: none !important;
     }
@@ -46,7 +48,6 @@ print_css = """
 </style>
 """
 st.markdown(print_css, unsafe_allow_html=True)
-
 
 # ==========================================
 # 1. PASSWORD PROTECTION LOGIC
