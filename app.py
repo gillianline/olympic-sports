@@ -10,6 +10,45 @@ st.set_page_config(page_title="Testing Dashboard", layout="wide")
 LOCKED_CONFIG = {"displayModeBar": False}
 
 # ==========================================
+# PRINT & EXPORT STYLING
+# ==========================================
+print_css = """
+<style>
+@media print {
+    /* Hide Streamlit UI elements we don't want on paper */
+    [data-testid="stSidebar"], 
+    [data-testid="stHeader"], 
+    [data-testid="stToolbar"], 
+    footer {
+        display: none !important;
+    }
+    
+    /* Expand main content area to full width and remove padding */
+    .main .block-container {
+        max-width: 100% !important;
+        padding-top: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Prevent page breaks inside Plotly charts and key metric blocks */
+    .js-plotly-plot, .hud-details-card, .hud-metric-row-light, .hud-metric-row-light-blue {
+        page-break-inside: avoid !important;
+    }
+
+    /* Force browsers to print background colors and SVGs (crucial for your anatomy HUD) */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+</style>
+"""
+st.markdown(print_css, unsafe_allow_html=True)
+
+
+# ==========================================
 # 1. PASSWORD PROTECTION LOGIC
 # ==========================================
 def check_password():
