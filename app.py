@@ -108,6 +108,7 @@ def check_password():
 # Stop execution if password fails
 if not check_password():
     st.stop()
+
 # ==========================================
 # 2. LOAD SECRET DATA
 # ==========================================
@@ -120,9 +121,10 @@ def load_data():
     df_nb = pd.read_csv(st.secrets["sheet_nordbord"]) 
     df_dj = pd.read_csv(st.secrets["sheet_drop_jump"]) 
     df_ash = pd.read_csv(st.secrets["sheet_ash"]) 
+    df_grip = pd.read_csv(st.secrets["sheet_grip"])
     
     # Clean up column names: remove hidden spaces and fix capitalization
-    for df in [df_ff, df_roster, df_cmj, df_bs, df_nb, df_dj, df_ash]:
+    for df in [df_ff, df_roster, df_cmj, df_bs, df_nb, df_dj, df_ash, df_grip]:
         df.columns = df.columns.str.strip()
         
         # Bulletproof: Force any variation of "season" or "sport" to be capitalized correctly
@@ -150,11 +152,12 @@ def load_data():
     df_nb = smart_merge(df_nb, df_roster)
     df_dj = smart_merge(df_dj, df_roster)
     df_ash = smart_merge(df_ash, df_roster)
+    df_grip = smart_merge(df_grip, df_roster)
     
-    return df_ff, df_cmj, df_bs, df_nb, df_dj, df_ash, df_roster
+    return df_ff, df_cmj, df_bs, df_nb, df_dj, df_ash, df_grip, df_roster
 
 try:
-    df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_ash_full, df_roster = load_data()
+    df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_ash_full, df_grip_full, df_roster = load_data()
 except Exception as e:
     st.error("Error loading secure data. Please check your sheet links in secrets.toml.")
     st.stop()
@@ -168,7 +171,7 @@ st.markdown("---")
 
 # 1. Season Filter (Moved to Main Page)
 all_seasons = set()
-for df in [df_roster, df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_ash_full]:
+for df in [df_roster, df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_ash_full, df_grip_full]:
     if 'Season' in df.columns:
         all_seasons.update(df['Season'].dropna().astype(str).unique().tolist())
 
@@ -217,6 +220,7 @@ filtered_bs = df_bs_full.copy()
 filtered_nb = df_nb_full.copy()
 filtered_dj = df_dj_full.copy()
 filtered_ash = df_ash_full.copy()
+filtered_grip = df_grip_full.copy()
 
 # Apply Season Filter Downstream
 if selected_season != "All Seasons":
@@ -226,6 +230,7 @@ if selected_season != "All Seasons":
     if 'Season' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Season'].astype(str) == selected_season]
     if 'Season' in filtered_dj.columns: filtered_dj = filtered_dj[filtered_dj['Season'].astype(str) == selected_season]
     if 'Season' in filtered_ash.columns: filtered_ash = filtered_ash[filtered_ash['Season'].astype(str) == selected_season]
+    if 'Season' in filtered_grip.columns: filtered_grip = filtered_grip[filtered_grip['Season'].astype(str) == selected_season]
 
 # Apply Sport Filter Downstream
 if selected_sport != "All Sports":
@@ -235,6 +240,7 @@ if selected_sport != "All Sports":
     if 'Sport' in filtered_nb.columns: filtered_nb = filtered_nb[filtered_nb['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_dj.columns: filtered_dj = filtered_dj[filtered_dj['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_ash.columns: filtered_ash = filtered_ash[filtered_ash['Sport'].astype(str) == selected_sport]
+    if 'Sport' in filtered_grip.columns: filtered_grip = filtered_grip[filtered_grip['Sport'].astype(str) == selected_sport]
 
 # Apply Player Filter Downstream
 if selected_player != "All Players":
@@ -244,6 +250,7 @@ if selected_player != "All Players":
     filtered_nb = filtered_nb[filtered_nb['Name'].astype(str) == selected_player]
     filtered_dj = filtered_dj[filtered_dj['Name'].astype(str) == selected_player]
     filtered_ash = filtered_ash[filtered_ash['Name'].astype(str) == selected_player]
+    filtered_grip = filtered_grip[filtered_grip['Name'].astype(str) == selected_player]
 
 # ==========================================
 # 4. HELPER FUNCTIONS
@@ -306,6 +313,12 @@ if not filtered_nb.empty and 'Date' in filtered_nb.columns:
     filtered_nb['Date_Str'] = filtered_nb['Date'].dt.strftime("%m/%d/%y")
 nordic_data = filtered_nb.copy()
 
+# ---- GRIP STRENGTH DATA PREP ----
+if not filtered_grip.empty and 'Date' in filtered_grip.columns:
+    filtered_grip['Date'] = pd.to_datetime(filtered_grip['Date'], errors='coerce')
+    filtered_grip['Date_Str'] = filtered_grip['Date'].dt.strftime("%m/%d/%y")
+grip_data = filtered_grip.copy()
+
 season_label = selected_season if selected_season != "All Seasons" else "All Seasons"
 season_key = season_label.replace(" ", "_").lower()
 roster_players = filtered_roster['Name'].dropna().unique().tolist()
@@ -317,7 +330,8 @@ roster_players = filtered_roster['Name'].dropna().unique().tolist()
 # Check if the logged-in sport actually has any intake assessment data
 has_any_intake = not (
     ankle_data.empty and knee_data.empty and shoulder_data.empty and 
-    hip_data.empty and belt_squat_data.empty and nordic_data.empty and ash_data.empty
+    hip_data.empty and belt_squat_data.empty and nordic_data.empty and 
+    ash_data.empty and grip_data.empty
 )
 
 # Dynamically build the tab list
@@ -355,8 +369,10 @@ if testing_tab_intake is not None:
         bs_ath = belt_squat_data[belt_squat_data["Name"] == selected_intake_athlete].sort_values("Date") if not belt_squat_data.empty and "Name" in belt_squat_data.columns else pd.DataFrame()
         dj_ath_intake = dj_data[dj_data["Name"] == selected_intake_athlete].sort_values("Date") if not dj_data.empty and "Name" in dj_data.columns else pd.DataFrame()
         ash_ath_intake = ash_data[ash_data["Name"] == selected_intake_athlete].sort_values("Date") if not ash_data.empty and "Name" in ash_data.columns else pd.DataFrame()
+        grip_ath = grip_data[grip_data["Name"] == selected_intake_athlete].sort_values("Date") if not grip_data.empty and "Name" in grip_data.columns else pd.DataFrame()
 
-        has_data = not (calf_ath.empty and hip_ath.empty and sh_ath.empty and nord_ath.empty and bs_ath.empty and dj_ath_intake.empty and ash_ath_intake.empty)
+        has_data = not (calf_ath.empty and hip_ath.empty and sh_ath.empty and nord_ath.empty and 
+                        bs_ath.empty and dj_ath_intake.empty and ash_ath_intake.empty and grip_ath.empty)
 
         def render_val_with_arrow(current, initial, fmt="{:.1f}", unit=""):
             if initial == 0 or pd.isna(initial) or pd.isna(current):
@@ -451,6 +467,14 @@ if testing_tab_intake is not None:
             <text x="16" y="212" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">7</text>
             """ if not dj_ath_intake.empty else ""
 
+            node_8_svg = """
+            <!-- 8. Grip Strength (Hand) - Right Side -->
+            <line x1="114" y1="104" x2="132" y2="104" stroke="#4895DB" stroke-width="2" stroke-dasharray="2 2" />
+            <circle cx="114" cy="104" r="4" fill="#4895DB" stroke="#FFFFFF" stroke-width="1.2" />
+            <rect x="132" y="96" width="16" height="16" rx="4" fill="#4895DB" />
+            <text x="140" y="108" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">8</text>
+            """ if not grip_ath.empty else ""
+
             hud_svg_html = f"""
             <div style="background:#FFFFFF; border-radius:16px; padding:16px; border:1px solid #E5E5E7; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
                 <div style="color:#1D1D1F; font-weight:800; font-size:13px; letter-spacing:1px; text-transform:uppercase; border-bottom:2px solid #FF8200; padding-bottom:6px; margin-bottom:12px;">ANATOMY LOCATION MAP</div>
@@ -488,6 +512,7 @@ if testing_tab_intake is not None:
                         {node_3_svg}
                         {node_5_svg}
                         {node_7_svg}
+                        {node_8_svg}
                     </svg>
                 </div>
             </div>
@@ -553,6 +578,30 @@ if testing_tab_intake is not None:
                                 """,
                                 unsafe_allow_html=True,
                             )
+
+                # 8. GRIP STRENGTH (Matches Node 8 - Hands)
+                if not grip_ath.empty:
+                    l_col_grip = "L Max Force (N)" if "L Max Force (N)" in grip_ath.columns else next((c for c in grip_ath.columns if "l max" in c.lower()), None)
+                    r_col_grip = "R Max Force (N)" if "R Max Force (N)" in grip_ath.columns else next((c for c in grip_ath.columns if "r max" in c.lower()), None)
+                    
+                    if l_col_grip and r_col_grip:
+                        (grip_maxL, grip_maxR), (grip_recL, grip_recR), (_, _) = get_peak_and_recent_row(grip_ath, l_col_grip, r_col_grip)
+                        date_str = format_date_clean(grip_ath.sort_values("Date").iloc[-1].get("Date"))
+                        
+                        st.markdown(
+                            f"""
+                            <div class="hud-metric-row-light-blue">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span style="font-weight:800; font-size:12px; color:#1D1D1F;"><span class="node-badge-blue">8</span>GRIP STRENGTH</span>
+                                    <span style="font-size:10px; color:#6E6E73; font-weight:600;">Latest: {date_str}</span>
+                                </div>
+                                <div style="font-size:11px; line-height:1.4; color:#1D1D1F;">
+                                    <b>Max Force:</b> L {grip_maxL:.1f}N | R {grip_maxR:.1f}N &nbsp;→&nbsp; <b>Recent:</b> L {render_val_with_arrow(grip_recL, grip_maxL, '{:.1f}', 'N')} | R {render_val_with_arrow(grip_recR, grip_maxR, '{:.1f}', 'N')}
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
 
                 # 1. BELT SQUAT (Matches Node 1 - Core/Waist)
                 if not bs_ath.empty:
@@ -756,8 +805,8 @@ if testing_tab_intake is not None:
                 df_display['Position'] = df_display.apply(get_movement, axis=1)
 
                 target_cols = [
-                    "Date", "Position", "L Max Force (N)", "R Max Force (N)", 
-                    "Max Imbalance", "L Max Ratio", "R Max Ratio"
+                    "Date", "Position", "Movement", "L Max Force (N)", "R Max Force (N)", 
+                    "Max Imbalance", "L Max Ratio", "R Max Ratio", "Force Asymmetry (%)"
                 ]
                 final_cols = [c for c in target_cols if c in df_display.columns]
                 df_final = df_display[final_cols].copy()
@@ -781,6 +830,22 @@ if testing_tab_intake is not None:
                             df_ash_display[col] = pd.to_numeric(df_ash_display[col], errors="coerce").apply(lambda x: f"{x:.1f}" if pd.notna(x) else pd.NA)
                     df_ash_display = df_ash_display.dropna(axis=1, how='all').fillna("-")
                     st.dataframe(df_ash_display, use_container_width=True, hide_index=True)
+            
+            if not grip_ath.empty:
+                with st.expander("Grip Strength Log", expanded=False):
+                    target_cols_grip = ["Date", "Movement", "L Max Force (N)", "R Max Force (N)", "Force Asymmetry (%)"]
+                    final_cols_grip = [c for c in target_cols_grip if c in grip_ath.columns]
+                    df_grip_display = grip_ath[final_cols_grip].copy()
+                    
+                    if "Date" in df_grip_display.columns:
+                        df_grip_display["Date"] = pd.to_datetime(df_grip_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                    
+                    for col in df_grip_display.columns:
+                        if "Force" in col or "Asymmetry" in col:
+                            df_grip_display[col] = pd.to_numeric(df_grip_display[col], errors="coerce").apply(lambda x: f"{x:.1f}" if pd.notna(x) else pd.NA)
+                    
+                    df_grip_display = df_grip_display.dropna(axis=1, how='all').fillna("-")
+                    st.dataframe(df_grip_display, use_container_width=True, hide_index=True)
 
             if not calf_ath.empty:
                 with st.expander("Ankle Plantar Flexion Log", expanded=False):
@@ -950,7 +1015,7 @@ with testing_tab_cmj:
             df_cmj_display = df_cmj_display.dropna(axis=1, how='all').fillna("-")
             st.dataframe(df_cmj_display, use_container_width=True, hide_index=True)
     else:
-        st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")       
+        st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")        
 
     # --- DROP JUMP SECTION ---
     p_dj = (
@@ -1628,6 +1693,12 @@ with testing_tab_overall:
                         "Best Test Value": f"{l_val:.1f} N / {r_val:.1f} N",
                         "Date Achieved": format_date_clean(best_ash.get("Date"))
                     })
+
+    p_grip_ov = grip_data[grip_data["Name"] == selected_ov_athlete].copy() if not grip_data.empty and "Name" in grip_data.columns else pd.DataFrame()
+    if not p_grip_ov.empty:
+        val, dt = get_formatted_peak_overall(p_grip_ov)
+        if val:
+            records.append({"Category": "Grip Strength (L/R)", "Best Test Value": val, "Date Achieved": dt})
 
     p_cmj_ov = cmj_data[cmj_data["Name"] == selected_ov_athlete] if not cmj_data.empty and "Name" in cmj_data.columns else pd.DataFrame()
     if not p_cmj_ov.empty:
