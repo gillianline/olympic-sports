@@ -962,7 +962,7 @@ with testing_tab_cmj:
                 # Default to the globally selected season if one is picked, otherwise show all
                 default_seasons = [selected_season] if selected_season != "All Seasons" and selected_season in available_seasons else available_seasons
                 jump_seasons = st.multiselect(
-                    "Compare Seasons:", 
+                    "Compare Seasons (Longitudinal Tracking):", 
                     available_seasons, 
                     default=default_seasons,
                     key=f"jump_season_select_{season_key}"
@@ -1155,15 +1155,13 @@ with testing_tab_cmj:
             
             team_cmj_rows.append({
                 "pb_val": pb,
-                "html": f"""
-                <tr style="border-bottom: 1px solid #E2E8F0;">
-                    <td style="padding:6px;"><img src="{pic}" style="width:32px; height:32px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
-                    <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath}</td>
-                    <td style="font-weight:600; color:#64748B;">{pos}</td>
-                    <td style="font-weight:800; font-size:14px; color:#1D1D1F; background:#F8FAFC;">{pb:.1f} cm</td>
-                    <td>{recent_html}<br><span style="font-size:10px; color:#64748B;">{recent_date}</span></td>
-                </tr>
-                """
+                "html": f"""<tr style="border-bottom: 1px solid #E2E8F0;">
+<td style="padding:6px;"><img src="{pic}" style="width:32px; height:32px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
+<td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath}</td>
+<td style="font-weight:600; color:#64748B;">{pos}</td>
+<td style="font-weight:800; font-size:14px; color:#1D1D1F; background:#F8FAFC;">{pb:.1f} cm</td>
+<td>{recent_html}<br><span style="font-size:10px; color:#64748B;">{recent_date}</span></td>
+</tr>"""
             })
             
         if team_cmj_rows:
@@ -1172,17 +1170,17 @@ with testing_tab_cmj:
             html_rows = "".join([r["html"] for r in team_cmj_rows])
             
             team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
-            <thead>
-                <tr style="background:#FF8200; color:white;">
-                    <th style="width:50px; padding:8px;">Photo</th>
-                    <th style="text-align:left !important; padding-left:15px;">Name</th>
-                    <th>Position</th>
-                    <th style="background:#82C6E2; color:#0F172A;">Personal Best (PB)</th>
-                    <th>Most Recent Jump</th>
-                </tr>
-            </thead><tbody>
-            {html_rows}
-            </tbody></table>"""
+<thead>
+<tr style="background:#FF8200; color:white;">
+<th style="width:50px; padding:8px;">Photo</th>
+<th style="text-align:left !important; padding-left:15px;">Name</th>
+<th>Position</th>
+<th style="background:#82C6E2; color:#0F172A;">Personal Best (PB)</th>
+<th>Most Recent Jump</th>
+</tr>
+</thead><tbody>
+{html_rows}
+</tbody></table>"""
             st.markdown(team_tbl_html, unsafe_allow_html=True)
         else:
             st.info(f"No CMJ records found for the team in {season_label}.")
@@ -1225,15 +1223,13 @@ with testing_tab_cmj:
             
             team_dj_rows.append({
                 "pb_val": pb,
-                "html": f"""
-                <tr style="border-bottom: 1px solid #E2E8F0;">
-                    <td style="padding:6px;"><img src="{pic}" style="width:32px; height:32px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
-                    <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath}</td>
-                    <td style="font-weight:600; color:#64748B;">{pos}</td>
-                    <td style="font-weight:800; font-size:14px; color:#1D1D1F; background:#F8FAFC;">{pb:.1f} cm</td>
-                    <td>{recent_html}<br><span style="font-size:10px; color:#64748B;">{recent_date}</span></td>
-                </tr>
-                """
+                "html": f"""<tr style="border-bottom: 1px solid #E2E8F0;">
+<td style="padding:6px;"><img src="{pic}" style="width:32px; height:32px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
+<td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath}</td>
+<td style="font-weight:600; color:#64748B;">{pos}</td>
+<td style="font-weight:800; font-size:14px; color:#1D1D1F; background:#F8FAFC;">{pb:.1f} cm</td>
+<td>{recent_html}<br><span style="font-size:10px; color:#64748B;">{recent_date}</span></td>
+</tr>"""
             })
             
         if team_dj_rows:
@@ -1241,17 +1237,17 @@ with testing_tab_cmj:
             html_rows = "".join([r["html"] for r in team_dj_rows])
             
             team_dj_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
-            <thead>
-                <tr style="background:#FF8200; color:white;">
-                    <th style="width:50px; padding:8px;">Photo</th>
-                    <th style="text-align:left !important; padding-left:15px;">Name</th>
-                    <th>Position</th>
-                    <th style="background:#82C6E2; color:#0F172A;">Personal Best (PB)</th>
-                    <th>Most Recent Jump</th>
-                </tr>
-            </thead><tbody>
-            {html_rows}
-            </tbody></table>"""
+<thead>
+<tr style="background:#FF8200; color:white;">
+<th style="width:50px; padding:8px;">Photo</th>
+<th style="text-align:left !important; padding-left:15px;">Name</th>
+<th>Position</th>
+<th style="background:#82C6E2; color:#0F172A;">Personal Best (PB)</th>
+<th>Most Recent Jump</th>
+</tr>
+</thead><tbody>
+{html_rows}
+</tbody></table>"""
             st.markdown(team_dj_html, unsafe_allow_html=True)
         else:
             st.info(f"No Drop Jump records found for the team in {season_label}.")
