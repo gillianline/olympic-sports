@@ -935,29 +935,53 @@ if testing_tab_intake is not None:
 # ==========================================
 with testing_tab_cmj:
     st.markdown(
-        f'<div class="vball-section-title">Jump Testing Performance — {season_label}</div>',
+        f'<div class="vball-section-title">Jump Testing & Coach Insights</div>',
         unsafe_allow_html=True,
     )
 
-    c_filter, _ = st.columns([1, 2])
-    with c_filter:
+    # Use the full dataset for the sport so we can track across multiple seasons
+    sport_cmj_full = df_cmj_full[df_cmj_full['Sport'].astype(str) == selected_sport] if 'Sport' in df_cmj_full.columns else df_cmj_full.copy()
+    sport_dj_full = df_dj_full[df_dj_full['Sport'].astype(str) == selected_sport] if 'Sport' in df_dj_full.columns else df_dj_full.copy()
+
+    c_filter1, c_filter2, _ = st.columns([1.5, 2, 1.5])
+    with c_filter1:
         selected_player_t = st.selectbox(
             "Select Athlete:", roster_players, key=f"jump_player_select_{season_key}"
         )
+    
+    # Get available seasons for this specific athlete
+    ath_cmj_base = sport_cmj_full[sport_cmj_full["Name"] == selected_player_t]
+    available_seasons = sorted(list(ath_cmj_base['Season'].dropna().astype(str).unique()), reverse=True) if 'Season' in ath_cmj_base.columns else []
+    
+    with c_filter2:
+        if available_seasons:
+            # Default to the globally selected season if one is picked, otherwise show all
+            default_seasons = [selected_season] if selected_season != "All Seasons" and selected_season in available_seasons else available_seasons
+            jump_seasons = st.multiselect(
+                "Compare Seasons (Longitudinal Tracking):", 
+                available_seasons, 
+                default=default_seasons,
+                key=f"jump_season_select_{season_key}"
+            )
+        else:
+            jump_seasons = []
 
     st.markdown("<br>", unsafe_allow_html=True)
     
     # --- CMJ SECTION ---
-    p_cmj = (
-        cmj_data[cmj_data["Name"] == selected_player_t]
-        .sort_values("Date")
-        .copy()
-        if not cmj_data.empty
-        else pd.DataFrame()
-    )
+    # Apply the local season filter
+    if jump_seasons and 'Season' in ath_cmj_base.columns:
+        p_cmj = ath_cmj_base[ath_cmj_base['Season'].astype(str).isin(jump_seasons)].copy()
+        team_cmj_ref = sport_cmj_full[sport_cmj_full['Season'].astype(str).isin(jump_seasons)].copy()
+    else:
+        p_cmj = ath_cmj_base.copy()
+        team_cmj_ref = sport_cmj_full.copy()
 
     if not p_cmj.empty:
-        st.markdown(f"#### Countermovement Jump (CMJ) History")
+        p_cmj['Date'] = pd.to_datetime(p_cmj['Date'], errors='coerce')
+        p_cmj = p_cmj.sort_values("Date")
+        
+        st.markdown(f"#### Countermovement Jump (CMJ) Insights")
         jump_cols = [c for c in p_cmj.columns if "jump" in c.lower() or "height" in c.lower()]
         j_col = jump_cols[0] if jump_cols else None
         rsi_cols = [c for c in p_cmj.columns if "rsi" in c.lower()]
@@ -965,13 +989,68 @@ with testing_tab_cmj:
 
         if j_col:
             p_cmj["Jump_Height_Clean"] = pd.to_numeric(p_cmj[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
+            team_cmj_ref["Jump_Height_Clean"] = pd.to_numeric(team_cmj_ref[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
             
+            # --- COACH ACTIONABLE INSIGHTS ---
+            recent_jump = p_cmj["Jump_Height_Clean"].dropna().iloc[-1] if not p_cmj["Jump_Height_Clean"].dropna().empty else 0
+            pb_jump = p_cmj["Jump_Height_Clean"].max()
+            team_avg_jump = team_cmj_ref["Jump_Height_Clean"].mean()
+            
+            diff_from_pb = recent_jump - pb_jump
+            diff_from_team = recent_jump - team_avg_jump
+            
+            # Generate Smart Coach Alert
+            if recent_jump >= pb_jump and recent_jump > 0:
+                insight_text = f"🔥 <b>Hitting Peak Form:</b> {selected_player_t} just hit a Personal Best ({recent_jump:.1f} cm)!"
+                insight_color = "#15803D" # Green
+                insight_bg = "#DCFCE7"
+            elif diff_from_pb <= -4.0:
+                insight_text = f"⚠️ <b>Fatigue / Readiness Warning:</b> Jump height is down {abs(diff_from_pb):.1f} cm from their PB. Consider load management or check wellness."
+                insight_color = "#B91C1C" # Red
+                insight_bg = "#FEE2E2"
+            elif recent_jump >= team_avg_jump:
+                insight_text = f"✅ <b>Above Average:</b> Performing well, jumping {diff_from_team:.1f} cm above the team average."
+                insight_color = "#0369A1" # Blue
+                insight_bg = "#E0F2FE"
+            else:
+                insight_text = f"ℹ️ <b>Monitoring:</b> Jump height is currently below the team average by {abs(diff_from_team):.1f} cm."
+                insight_color = "#B45309" # Orange
+                insight_bg = "#FEF3C7"
+
+            st.markdown(
+                f"""
+                <div style="background:{insight_bg}; color:{insight_color}; padding:12px 16px; border-radius:8px; border: 1px solid {insight_color}; margin-bottom: 20px;">
+                    <span style="font-size: 15px;">{insight_text}</span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            # Metric Cards
+            kpi1, kpi2, kpi3 = st.columns(3)
+            kpi1.metric("Latest Jump Height", f"{recent_jump:.1f} cm", f"{diff_from_pb:.1f} cm vs PB", delta_color="normal" if diff_from_pb >= 0 else "inverse")
+            kpi2.metric("Personal Best (Selected Seasons)", f"{pb_jump:.1f} cm")
+            kpi3.metric("Team Average (Selected Seasons)", f"{team_avg_jump:.1f} cm", f"{diff_from_team:.1f} cm vs Team", delta_color="normal" if diff_from_team >= 0 else "inverse")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # --- TREND CHART ---
             fig_jump_trend = go.Figure()
             fig_jump_trend.add_trace(go.Scatter(
                 x=p_cmj["Date"], y=p_cmj["Jump_Height_Clean"],
-                name="Jump Height", mode="lines+markers", connectgaps=True,
+                name="Athlete Jump Height", mode="lines+markers", connectgaps=True,
                 yaxis="y", line=dict(color="#FF8200", width=4), marker=dict(size=8, color="#FF8200"),
             ))
+
+            # Add Team Average Reference Line
+            if pd.notna(team_avg_jump):
+                fig_jump_trend.add_hline(
+                    y=team_avg_jump, 
+                    line=dict(color="#64748B", width=2, dash="dash"),
+                    annotation_text="Team Avg", 
+                    annotation_position="bottom right",
+                    annotation_font=dict(color="#64748B", size=11)
+                )
 
             if rsi_col:
                 p_cmj["RSI_Clean"] = pd.to_numeric(p_cmj[rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
@@ -982,7 +1061,7 @@ with testing_tab_cmj:
                 ))
 
             fig_jump_trend.update_layout(
-                height=320, margin=dict(l=40, r=40, t=50, b=40),
+                height=340, margin=dict(l=40, r=40, t=20, b=40),
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0.01, font=dict(size=13, color="#0F172A")),
                 xaxis=dict(title=None, type="date", tickformat="%b %d\n%Y", showgrid=False, showline=True, linewidth=1.5, linecolor="#0F172A", tickfont=dict(color="#64748B", size=12)),
@@ -991,6 +1070,7 @@ with testing_tab_cmj:
             )
             st.plotly_chart(fig_jump_trend, use_container_width=True, key=f"cmj_trend_{season_key}")
 
+            # --- DATA TABLE ---
             target_cols = ["Test Type", "Date", "BW [KG]"]
             if j_col: target_cols.append(j_col)
             target_cols.extend(["Peak Power [W]", "Eccentric Braking RFD [N/s]"])
@@ -1015,18 +1095,20 @@ with testing_tab_cmj:
             df_cmj_display = df_cmj_display.dropna(axis=1, how='all').fillna("-")
             st.dataframe(df_cmj_display, use_container_width=True, hide_index=True)
     else:
-        st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in {season_label}.")        
+        st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in the selected season(s).")        
 
     # --- DROP JUMP SECTION ---
-    p_dj = (
-        dj_data[dj_data["Name"] == selected_player_t]
-        .sort_values("Date")
-        .copy()
-        if not dj_data.empty
-        else pd.DataFrame()
-    )
-    
+    # Apply local season filter to drop jumps as well
+    ath_dj_base = sport_dj_full[sport_dj_full["Name"] == selected_player_t]
+    if jump_seasons and 'Season' in ath_dj_base.columns:
+        p_dj = ath_dj_base[ath_dj_base['Season'].astype(str).isin(jump_seasons)].copy()
+    else:
+        p_dj = ath_dj_base.copy()
+        
     if not p_dj.empty:
+        p_dj['Date'] = pd.to_datetime(p_dj['Date'], errors='coerce')
+        p_dj = p_dj.sort_values("Date")
+        
         st.divider()
         st.markdown(f"#### Drop Jump Performance History")
         
@@ -1084,8 +1166,7 @@ with testing_tab_cmj:
         
         df_dj_display = df_dj_display.dropna(axis=1, how='all').fillna("-")
         st.dataframe(df_dj_display, use_container_width=True, hide_index=True)
-
-
+        
 # ==========================================
 # SECTION 5C: WELLNESS JUMP TAB
 # ==========================================
