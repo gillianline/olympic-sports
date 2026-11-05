@@ -935,7 +935,7 @@ if testing_tab_intake is not None:
 # ==========================================
 with testing_tab_cmj:
     st.markdown(
-        f'<div class="vball-section-title">Jump Testing & Coach Insights</div>',
+        f'<div class="vball-section-title">Jump Testing Performance</div>',
         unsafe_allow_html=True,
     )
 
@@ -972,16 +972,14 @@ with testing_tab_cmj:
     # Apply the local season filter
     if jump_seasons and 'Season' in ath_cmj_base.columns:
         p_cmj = ath_cmj_base[ath_cmj_base['Season'].astype(str).isin(jump_seasons)].copy()
-        team_cmj_ref = sport_cmj_full[sport_cmj_full['Season'].astype(str).isin(jump_seasons)].copy()
     else:
         p_cmj = ath_cmj_base.copy()
-        team_cmj_ref = sport_cmj_full.copy()
 
     if not p_cmj.empty:
         p_cmj['Date'] = pd.to_datetime(p_cmj['Date'], errors='coerce')
         p_cmj = p_cmj.sort_values("Date")
         
-        st.markdown(f"#### Countermovement Jump (CMJ) Insights")
+        st.markdown(f"#### Countermovement Jump (CMJ) History")
         jump_cols = [c for c in p_cmj.columns if "jump" in c.lower() or "height" in c.lower()]
         j_col = jump_cols[0] if jump_cols else None
         rsi_cols = [c for c in p_cmj.columns if "rsi" in c.lower()]
@@ -989,51 +987,7 @@ with testing_tab_cmj:
 
         if j_col:
             p_cmj["Jump_Height_Clean"] = pd.to_numeric(p_cmj[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
-            team_cmj_ref["Jump_Height_Clean"] = pd.to_numeric(team_cmj_ref[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
             
-            # --- COACH ACTIONABLE INSIGHTS ---
-            recent_jump = p_cmj["Jump_Height_Clean"].dropna().iloc[-1] if not p_cmj["Jump_Height_Clean"].dropna().empty else 0
-            pb_jump = p_cmj["Jump_Height_Clean"].max()
-            team_avg_jump = team_cmj_ref["Jump_Height_Clean"].mean()
-            
-            diff_from_pb = recent_jump - pb_jump
-            diff_from_team = recent_jump - team_avg_jump
-            
-            # Generate Smart Coach Alert
-            #if recent_jump >= pb_jump and recent_jump > 0:
-                #insight_text = f"🔥 <b>Hitting Peak Form:</b> {selected_player_t} just hit a Personal Best ({recent_jump:.1f} cm)!"
-                #insight_color = "#15803D" # Green
-                #insight_bg = "#DCFCE7"
-           #elif diff_from_pb <= -4.0:
-                #insight_text = f"⚠️ <b>Fatigue / Readiness Warning:</b> Jump height is down {abs(diff_from_pb):.1f} cm from their PB. Consider load management or check wellness."
-                #insight_color = "#B91C1C" # Red
-                #insight_bg = "#FEE2E2"
-           # elif recent_jump >= team_avg_jump:
-                #insight_text = f"✅ <b>Above Average:</b> Performing well, jumping {diff_from_team:.1f} cm above the team average."
-                #insight_color = "#0369A1" # Blue
-                #insight_bg = "#E0F2FE"
-            #else:
-                #insight_text = f"ℹ️ <b>Monitoring:</b> Jump height is currently below the team average by {abs(diff_from_team):.1f} cm."
-                #insight_color = "#B45309" # Orange
-                #insight_bg = "#FEF3C7"
-
-            st.markdown(
-                f"""
-                <div style="background:{insight_bg}; color:{insight_color}; padding:12px 16px; border-radius:8px; border: 1px solid {insight_color}; margin-bottom: 20px;">
-                    <span style="font-size: 15px;">{insight_text}</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            # Metric Cards
-            kpi1, kpi2, kpi3 = st.columns(3)
-            kpi1.metric("Latest Jump Height", f"{recent_jump:.1f} cm", f"{diff_from_pb:.1f} cm vs PB", delta_color="normal" if diff_from_pb >= 0 else "inverse")
-            kpi2.metric("Personal Best (Selected Seasons)", f"{pb_jump:.1f} cm")
-            kpi3.metric("Team Average (Selected Seasons)", f"{team_avg_jump:.1f} cm", f"{diff_from_team:.1f} cm vs Team", delta_color="normal" if diff_from_team >= 0 else "inverse")
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-
             # --- TREND CHART ---
             fig_jump_trend = go.Figure()
             fig_jump_trend.add_trace(go.Scatter(
@@ -1041,16 +995,6 @@ with testing_tab_cmj:
                 name="Athlete Jump Height", mode="lines+markers", connectgaps=True,
                 yaxis="y", line=dict(color="#FF8200", width=4), marker=dict(size=8, color="#FF8200"),
             ))
-
-            # Add Team Average Reference Line
-            if pd.notna(team_avg_jump):
-                fig_jump_trend.add_hline(
-                    y=team_avg_jump, 
-                    line=dict(color="#64748B", width=2, dash="dash"),
-                    annotation_text="Team Avg", 
-                    annotation_position="bottom right",
-                    annotation_font=dict(color="#64748B", size=11)
-                )
 
             if rsi_col:
                 p_cmj["RSI_Clean"] = pd.to_numeric(p_cmj[rsi_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
