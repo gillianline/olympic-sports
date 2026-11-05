@@ -958,7 +958,7 @@ with testing_tab_cmj:
             # Default to the globally selected season if one is picked, otherwise show all
             default_seasons = [selected_season] if selected_season != "All Seasons" and selected_season in available_seasons else available_seasons
             jump_seasons = st.multiselect(
-                "Compare Seasons (Longitudinal Tracking):", 
+                "Compare Seasons:", 
                 available_seasons, 
                 default=default_seasons,
                 key=f"jump_season_select_{season_key}"
@@ -1000,22 +1000,22 @@ with testing_tab_cmj:
             diff_from_team = recent_jump - team_avg_jump
             
             # Generate Smart Coach Alert
-            if recent_jump >= pb_jump and recent_jump > 0:
-                insight_text = f"🔥 <b>Hitting Peak Form:</b> {selected_player_t} just hit a Personal Best ({recent_jump:.1f} cm)!"
-                insight_color = "#15803D" # Green
-                insight_bg = "#DCFCE7"
-            elif diff_from_pb <= -4.0:
-                insight_text = f"⚠️ <b>Fatigue / Readiness Warning:</b> Jump height is down {abs(diff_from_pb):.1f} cm from their PB. Consider load management or check wellness."
-                insight_color = "#B91C1C" # Red
-                insight_bg = "#FEE2E2"
-            elif recent_jump >= team_avg_jump:
-                insight_text = f"✅ <b>Above Average:</b> Performing well, jumping {diff_from_team:.1f} cm above the team average."
-                insight_color = "#0369A1" # Blue
-                insight_bg = "#E0F2FE"
-            else:
-                insight_text = f"ℹ️ <b>Monitoring:</b> Jump height is currently below the team average by {abs(diff_from_team):.1f} cm."
-                insight_color = "#B45309" # Orange
-                insight_bg = "#FEF3C7"
+            #if recent_jump >= pb_jump and recent_jump > 0:
+                #insight_text = f"🔥 <b>Hitting Peak Form:</b> {selected_player_t} just hit a Personal Best ({recent_jump:.1f} cm)!"
+                #insight_color = "#15803D" # Green
+                #insight_bg = "#DCFCE7"
+           #elif diff_from_pb <= -4.0:
+                #insight_text = f"⚠️ <b>Fatigue / Readiness Warning:</b> Jump height is down {abs(diff_from_pb):.1f} cm from their PB. Consider load management or check wellness."
+                #insight_color = "#B91C1C" # Red
+                #insight_bg = "#FEE2E2"
+           # elif recent_jump >= team_avg_jump:
+                #insight_text = f"✅ <b>Above Average:</b> Performing well, jumping {diff_from_team:.1f} cm above the team average."
+                #insight_color = "#0369A1" # Blue
+                #insight_bg = "#E0F2FE"
+            #else:
+                #insight_text = f"ℹ️ <b>Monitoring:</b> Jump height is currently below the team average by {abs(diff_from_team):.1f} cm."
+                #insight_color = "#B45309" # Orange
+                #insight_bg = "#FEF3C7"
 
             st.markdown(
                 f"""
