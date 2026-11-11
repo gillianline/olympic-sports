@@ -1331,11 +1331,12 @@ with testing_tab_wellness:
             with top_col1:
                 pos_display_html = f'<div style="font-size:14px; line-height:1.8; color:#1D1D1F;"><b>Position:</b> {pos_val}</div>' if selected_sport != "Golf" else ""
 
-                ath_card_html = f"""<div style="background:#4895DB; color:white; font-weight:900; font-size:18px; text-align:center; padding:8px 10px; border-radius:6px 6px 0 0;">{sel_cmj_ath}</div><div style="border:1px solid #E2E8F0; border-top:none; border-radius:0 0 6px 6px; padding:16px; background:white; display:flex; align-items:center; gap:16px;"><img src="{photo_val}" style="width:95px; height:95px; border-radius:8px; object-fit:contain; border:2px solid #FF8200;"><div>{pos_display_html}</div></div>"""
+                ath_card_html = f'<div style="background:#4895DB; color:white; font-weight:900; font-size:18px; text-align:center; padding:8px 10px; border-radius:6px 6px 0 0;">{sel_cmj_ath}</div><div style="border:1px solid #E2E8F0; border-top:none; border-radius:0 0 6px 6px; padding:16px; background:white; display:flex; align-items:center; gap:16px;"><img src="{photo_val}" style="width:95px; height:95px; border-radius:8px; object-fit:contain; border:2px solid #FF8200;"><div>{pos_display_html}</div></div>'
                 st.markdown(ath_card_html, unsafe_allow_html=True)
+                comp_options = ["Individual", "Team"] if selected_sport == "Golf" else ["Individual", "Team", "Position"]
                 comp_factor = st.selectbox(
                     "Comparison Factor",
-                    ["Individual", "Team", "Position"],
+                    comp_options,
                     key="cmj_dash_comp_sel",
                 )
 
@@ -1352,13 +1353,13 @@ with testing_tab_wellness:
                     diff = ((c_val - b_val) / b_val * 100) if b_val > 0 else 0.0
                     pct_color = "#137333" if diff >= 0 else "#D93025"
                     
-                    table_rows_str += f"""<tr><td style="text-align:left !important; padding-left:12px; font-weight:600;">{lbl}</td><td style="color:#64748B;">{fmt.format(b_val)}</td><td style="font-weight:800; background:#F0F7FF; border: 1px solid #3B82F6;">{fmt.format(c_val)}</td><td style="font-weight:800; color:{pct_color};">{diff:+.0f}%</td></tr>"""
+                    table_rows_str += f'<tr><td style="text-align:left !important; padding-left:12px; font-weight:600;">{lbl}</td><td style="color:#64748B;">{fmt.format(b_val)}</td><td style="font-weight:800; background:#F0F7FF; border: 1px solid #3B82F6;">{fmt.format(c_val)}</td><td style="font-weight:800; color:{pct_color};">{diff:+.0f}%</td></tr>'
 
-                full_table_html = f"""<div style="background:#4895DB; color:white; font-weight:900; font-size:14px; text-align:center; padding:6px; border-radius:6px 6px 0 0;">Countermovement Jump Performance</div><table class="scout-table" style="width:100%; border:1px solid #E2E8F0; border-top:none; background:white; border-collapse:collapse; margin-bottom:0;"><thead><tr style="background:#F8FAFC; color:#64748B; font-size:11px;"><th style="text-align:left !important; padding:6px 12px;">Metric</th><th style="padding:6px;">Baseline (Overall)</th><th style="padding:6px; background:#EBF5FF; color:#1E40AF;">Current</th><th style="padding:6px;">% Change</th></tr></thead><tbody>{table_rows_str}</tbody></table>"""
+                full_table_html = f'<div style="background:#4895DB; color:white; font-weight:900; font-size:14px; text-align:center; padding:6px; border-radius:6px 6px 0 0;">Countermovement Jump Performance</div><table class="scout-table" style="width:100%; border:1px solid #E2E8F0; border-top:none; background:white; border-collapse:collapse; margin-bottom:0;"><thead><tr style="background:#F8FAFC; color:#64748B; font-size:11px;"><th style="text-align:left !important; padding:6px 12px;">Metric</th><th style="padding:6px;">Baseline (Overall)</th><th style="padding:6px; background:#EBF5FF; color:#1E40AF;">Current</th><th style="padding:6px;">% Change</th></tr></thead><tbody>{table_rows_str}</tbody></table>'
                 st.markdown(full_table_html, unsafe_allow_html=True)
 
             with top_col3:
-                gauge_header = f"""<div style="background:#4895DB; color:white; font-weight:900; font-size:14px; text-align:center; padding:6px; border-radius:6px 6px 0 0;">Wellness Score<br><span style="font-size:11px; font-weight:600;">{sel_test_date_str}</span></div>"""
+                gauge_header = f'<div style="background:#4895DB; color:white; font-weight:900; font-size:14px; text-align:center; padding:6px; border-radius:6px 6px 0 0;">Wellness Score<br><span style="font-size:11px; font-weight:600;">{sel_test_date_str}</span></div>'
                 st.markdown(gauge_header, unsafe_allow_html=True)
                 fig_gauge = create_wellness_gauge(display_score, height=230)
                 st.plotly_chart(
@@ -1368,7 +1369,150 @@ with testing_tab_wellness:
                     key="cmj_wellness_gauge_ind",
                 )
 
-        # --- GOLF WHOOP INDIVIDUAL VIEW (NOW ON WELLNESS TAB) ---
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(
+                '<div class="section-header">Countermovement Jump Performance Standards </div>',
+                unsafe_allow_html=True,
+            )
+            
+            chart_col, legend_col = st.columns([4.2, 1.1])
+
+            with chart_col:
+                bar_metrics_excel = [
+                    {"name": "Jump Height", "col": cmj_col, "invert": False},
+                    {"name": "Jump Momentum", "col": "Jump Momentum", "alt_col": "Take-off Momentum [kg m/s]", "invert": False},
+                    {"name": "Peak Velocity", "col": "Concentric Peak Velocity [m/s]", "invert": False},
+                    {"name": "Mean Con Force", "col": "Relative Mean Con Force", "alt_col": "Concentric Mean Force [N]", "invert": False},
+                    {"name": "Force @ 0 Velocity", "col": "Relative Force @ 0 Velo", "alt_col": "Force at Zero Velocity [N]", "invert": False},
+                    {"name": "Positive Impulse", "col": "Positive Impulse [N s]", "invert": False},
+                    {"name": "P1 Con Impulse", "col": "P1 Concentric Impulse [N s]", "invert": False},
+                    {"name": "P2 Con Impulse", "col": "P2 Concentric Impulse [N s]", "invert": False},
+                    {"name": "CM Depth", "col": "Adjusted CMD", "alt_col": "Countermovement Depth [cm]", "invert": False},
+                    {"name": "Time to Takeoff", "col": "Contraction Time [ms]", "alt_col": "Time to Takeoff [s]", "invert": True},
+                ]
+
+                if comp_factor == "Individual":
+                    ref_pool_df = cmj_data[cmj_data["Name"] == sel_cmj_ath]
+                    title_prefix = "Individual"
+                elif comp_factor == "Position":
+                    pos_athletes = filtered_roster[filtered_roster["Position"] == pos_val]["Name"].unique() if "Position" in filtered_roster.columns else []
+                    ref_pool_df = cmj_data[cmj_data["Name"].isin(pos_athletes)]
+                    if ref_pool_df.empty:
+                        ref_pool_df = cmj_data
+                    title_prefix = "Position"
+                else:
+                    ref_pool_df = cmj_data
+                    title_prefix = "Team"
+
+                t_scores = []
+                x_labels = []
+                for bm in bar_metrics_excel:
+                    x_labels.append(bm["name"])
+                    cname = bm["col"] if bm["col"] in cur_test_row else bm.get("alt_col", bm["col"])
+                    
+                    ath_v = abs(float(cur_test_row.get(cname, 0.0))) if cname in cur_test_row and pd.notna(cur_test_row.get(cname)) else 0.0
+                    
+                    if cname in ref_pool_df.columns and len(ref_pool_df[cname].dropna()) > 1:
+                        valid_series = pd.to_numeric(ref_pool_df[cname], errors='coerce').dropna().abs()
+                        m_mean = valid_series.mean()
+                        m_std = valid_series.std(ddof=1)
+                        if m_std > 0:
+                            z_val = -1.0 * ((ath_v - m_mean) / m_std) if bm["invert"] else (ath_v - m_mean) / m_std
+                            t_val = 50.0 + (z_val * 10.0)
+                            t_scores.append(round(min(100.0, max(0.0, t_val)), 1))
+                        else:
+                            t_scores.append(50.0)
+                    else:
+                        t_scores.append(50.0)
+
+                fig_bands = go.Figure()
+                bands = [
+                    {"y0": 0, "y1": 20, "color": "#A00000"},
+                    {"y0": 20, "y1": 30, "color": "#E60000"},
+                    {"y0": 30, "y1": 40, "color": "#F05656"},
+                    {"y0": 40, "y1": 45, "color": "#F8A2A2"},
+                    {"y0": 45, "y1": 55, "color": "#FFFFFF"},
+                    {"y0": 55, "y1": 60, "color": "#C3E8A8"},
+                    {"y0": 60, "y1": 70, "color": "#81D350"},
+                    {"y0": 70, "y1": 80, "color": "#33A338"},
+                    {"y0": 80, "y1": 100, "color": "#1C7426"},
+                ]
+                for b in bands:
+                    fig_bands.add_hrect(
+                        y0=b["y0"], y1=b["y1"], fillcolor=b["color"],
+                        line_width=0, opacity=1.0, layer="below",
+                    )
+                
+                fig_bands.add_trace(
+                    go.Bar(
+                        x=x_labels,
+                        y=t_scores,
+                        marker=dict(
+                            color="#3A3D40",
+                            line=dict(color="#1A1C1E", width=1.5),
+                        ),
+                        width=0.42,
+                        text=[f"<b>{val:.1f}</b>" for val in t_scores],
+                        textposition="inside",
+                        insidetextanchor="middle",
+                        textfont=dict(color="white", size=12),
+                        cliponaxis=False,
+                    )
+                )
+
+                category_boxes = [
+                    {"x0": 0.55, "x1": 2.45, "text": "Speed", "bg": "#F8E2E2"},
+                    {"x0": 2.55, "x1": 6.45, "text": "Strength", "bg": "#EBF3DF"},
+                    {"x0": 6.55, "x1": 7.45, "text": "Power", "bg": "#D3E2F4"},
+                    {"x0": 7.55, "x1": 9.45, "text": "Jump Strategy", "bg": "#E6E1F2"},
+                ]
+                
+                for cb in category_boxes:
+                    fig_bands.add_shape(
+                        type="rect", xref="x", yref="paper",
+                        x0=cb["x0"], x1=cb["x1"], y0=-0.16, y1=-0.08,
+                        fillcolor=cb["bg"], line=dict(width=0), layer="above",
+                    )
+                    fig_bands.add_annotation(
+                        xref="x", yref="paper",
+                        x=(cb["x0"] + cb["x1"]) / 2, y=-0.12,
+                        text=f"<b>{cb['text']}</b>", showarrow=False,
+                        font=dict(size=11, color="#111827"), align="center",
+                    )
+
+                fig_bands.update_layout(
+                    height=450,
+                    margin=dict(l=30, r=10, t=15, b=65),
+                    plot_bgcolor="white",
+                    paper_bgcolor="white",
+                    xaxis=dict(
+                        tickangle=0,
+                        tickfont=dict(size=10.5, weight="bold", color="#111827"),
+                        showgrid=False, showline=True, linecolor="#6B7280",
+                    ),
+                    yaxis=dict(
+                        range=[0, 100], dtick=10,
+                        showgrid=False, showline=True, linecolor="#6B7280",
+                        title=dict(
+                            text=f"{title_prefix} T-Score Performance Rating",
+                            font=dict(size=12, weight="bold", color="#4B5563"),
+                        ),
+                    ),
+                    showlegend=False,
+                )
+                
+                st.plotly_chart(
+                    fig_bands,
+                    use_container_width=True,
+                    config=LOCKED_CONFIG,
+                    key=f"cmj_standards_chart_{comp_factor}",
+                )
+
+            with legend_col:
+                legend_table_html = '<div style="background:#4895DB; color:white; font-weight:800; font-size:12px; text-align:center; padding:6px; border-radius:4px 4px 0 0;">Performance Bands<br><span style="font-size:10px; font-weight:600;">T-Score Rating</span></div><table style="width:100%; border-collapse:collapse; font-size:11px; text-align:center; font-weight:700;"><tr style="background:#1C7426; color:white;"><td style="padding:4px;">Excellent</td><td>> 80</td></tr><tr style="background:#33A338; color:white;"><td style="padding:4px;">Very Good</td><td>70 - 80</td></tr><tr style="background:#81D350; color:#111827;"><td style="padding:4px;">Good</td><td>60 - 70</td></tr><tr style="background:#C3E8A8; color:#111827;"><td style="padding:4px;">Above Avg.</td><td>55 - 60</td></tr><tr style="background:#FFFFFF; color:#111827; border-top:1px solid #E2E8F0; border-bottom:1px solid #E2E8F0;"><td style="padding:4px;">Average</td><td>45 - 55</td></tr><tr style="background:#F8A2A2; color:#111827;"><td style="padding:4px;">Below Avg.</td><td>40 - 45</td></tr><tr style="background:#F05656; color:white;"><td style="padding:4px;">Poor</td><td>30 - 40</td></tr><tr style="background:#E60000; color:white;"><td style="padding:4px;">Very Poor</td><td>20 - 30</td></tr><tr style="background:#A00000; color:white;"><td style="padding:4px;">Extremely Poor</td><td>< 20</td></tr></table>'
+                st.markdown(legend_table_html, unsafe_allow_html=True)
+
+        # --- GOLF WHOOP INDIVIDUAL VIEW ---
         if selected_sport == "Golf":
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(f"#### WHOOP Recovery & Sleep Log ({sel_cmj_ath})")
@@ -1392,8 +1536,11 @@ with testing_tab_wellness:
             with c_sum_d1:
                 sel_team_cmj_date = st.selectbox("Evaluation Test Date", team_cmj_dates, index=0, key="team_cmj_eval_date")
             with c_sum_d2:
-                positions = [p for p in filtered_roster["Position"].unique() if pd.notna(p) and p != "N/A"] if "Position" in filtered_roster.columns else []
-                team_pos_f = st.selectbox("Filter by Position", ["All Positions"] + sorted(positions), key="team_cmj_pos_filter")
+                if selected_sport != "Golf":
+                    positions = [p for p in filtered_roster["Position"].unique() if pd.notna(p) and str(p).strip() not in ["N/A", "nan", ""]] if "Position" in filtered_roster.columns else []
+                    team_pos_f = st.selectbox("Filter by Position", ["All Positions"] + sorted(positions), key="team_cmj_pos_filter")
+                else:
+                    team_pos_f = "All Positions"
 
             team_cmj_rows = []
             wellness_metrics_ref = [
@@ -1485,43 +1632,36 @@ with testing_tab_wellness:
                     "P2P1_c": get_pct_color(indiv_scores.get("P2P1"))
                 }
 
-                # Construct base row HTML
                 r_val = readiness_pct
                 status_text = "Optimal Readiness" if r_val >= 90 else ("Moderate Fatigue" if r_val >= 80 else "High Fatigue Risk")
                 badge_bg = "#DCFCE7" if r_val >= 90 else ("#FEF3C7" if r_val >= 80 else "#FEE2E2")
                 badge_fg = "#15803D" if r_val >= 90 else ("#B45309" if r_val >= 80 else "#B91C1C")
 
-                pos_cell = f'<td style="font-weight:600; color:#64748B;">{pos_str}</td>' if selected_sport != "Golf" else ""
+                pos_str_display = pos_str if pd.notna(pos_str) and str(pos_str).strip().lower() not in ["nan", "n/a", "none", ""] else "-"
+                pos_cell = f'<td style="font-weight:600; color:#64748B;">{pos_str_display}</td>' if selected_sport != "Golf" else ""
 
-                row_html = f"""<tr style="border-bottom: 1px solid #E2E8F0;">
-                    <td style="padding:6px;"><img src="{photo_url}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
-                    <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath_name}</td>
-                    {pos_cell}
-                    <td style="font-weight:900; font-size:15px; color:{z_color}; background:#F8FAFC;">{readiness_pct}%</td>
-                    <td><span style="background-color:{badge_bg}; color:{badge_fg}; padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.75rem; white-space:nowrap;">{status_text}</span></td>
-                    <td style="font-weight:800; color:{row_dict['mRSI_c']};">{row_dict['mRSI']}</td>
-                    <td style="font-weight:800; color:{row_dict['Ecc_RFD_c']};">{row_dict['Ecc_RFD']}</td>
-                    <td style="font-weight:800; color:{row_dict['F0V_c']};">{row_dict['F0V']}</td>
-                    <td style="font-weight:800; color:{row_dict['TTO_c']};">{row_dict['Time_Takeoff']}</td>
-                    <td style="font-weight:800; color:{row_dict['P2P1_c']};">{row_dict['P2P1']}</td>"""
-
-                row_html = f"""<tr style="border-bottom: 1px solid #E2E8F0;">
-                    <td style="padding:6px;"><img src="{photo_url}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
-                    <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath_name}</td>
-                    <td style="font-weight:600; color:#64748B;">{pos_str}</td>
-                    <td style="font-weight:900; font-size:15px; color:{z_color}; background:#F8FAFC;">{readiness_pct}%</td>
-                    <td><span style="background-color:{badge_bg}; color:{badge_fg}; padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.75rem; white-space:nowrap;">{status_text}</span></td>
-                    <td style="font-weight:800; color:{row_dict['mRSI_c']};">{row_dict['mRSI']}</td>
-                    <td style="font-weight:800; color:{row_dict['Ecc_RFD_c']};">{row_dict['Ecc_RFD']}</td>
-                    <td style="font-weight:800; color:{row_dict['F0V_c']};">{row_dict['F0V']}</td>
-                    <td style="font-weight:800; color:{row_dict['TTO_c']};">{row_dict['Time_Takeoff']}</td>
-                    <td style="font-weight:800; color:{row_dict['P2P1_c']};">{row_dict['P2P1']}</td>"""
+                # Build single-line HTML string with zero leading indentation to prevent Markdown code-block bug
+                row_html = (
+                    f'<tr style="border-bottom: 1px solid #E2E8F0;">'
+                    f'<td style="padding:6px;"><img src="{photo_url}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>'
+                    f'<td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath_name}</td>'
+                    f'{pos_cell}'
+                    f'<td style="font-weight:900; font-size:15px; color:{z_color}; background:#F8FAFC;">{readiness_pct}%</td>'
+                    f'<td><span style="background-color:{badge_bg}; color:{badge_fg}; padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.75rem; white-space:nowrap;">{status_text}</span></td>'
+                    f'<td style="font-weight:800; color:{row_dict["mRSI_c"]};">{row_dict["mRSI"]}</td>'
+                    f'<td style="font-weight:800; color:{row_dict["Ecc_RFD_c"]};">{row_dict["Ecc_RFD"]}</td>'
+                    f'<td style="font-weight:800; color:{row_dict["F0V_c"]};">{row_dict["F0V"]}</td>'
+                    f'<td style="font-weight:800; color:{row_dict["TTO_c"]};">{row_dict["Time_Takeoff"]}</td>'
+                    f'<td style="font-weight:800; color:{row_dict["P2P1_c"]};">{row_dict["P2P1"]}</td>'
+                )
 
                 # Inject Golf Whoop columns with color-coded numbers and light blue shading
-                if selected_sport == "Golf" and not whoop_data.empty:
-                    ath_w = whoop_data[whoop_data['Name'] == ath_name]
+                if selected_sport == "Golf":
+                    ath_w = whoop_data[whoop_data['Name'] == ath_name] if not whoop_data.empty else pd.DataFrame()
                     if not ath_w.empty:
-                        latest_w = ath_w.sort_values("Date").iloc[-1]
+                        # Match evaluation date if available, otherwise grab latest
+                        w_match = ath_w[ath_w["Date_Str"] == sel_team_cmj_date] if "Date_Str" in ath_w.columns else pd.DataFrame()
+                        latest_w = w_match.iloc[-1] if not w_match.empty else ath_w.sort_values("Date").iloc[-1]
                         
                         rec_score = latest_w.get("Whoop Recovery Score (%)", "N/A")
                         hrv = latest_w.get("Overnight HRV", "N/A")
@@ -1531,12 +1671,17 @@ with testing_tab_wellness:
                         hrv_color = get_whoop_color(hrv, "hrv")
                         sleep_color = get_whoop_color(sleep, "sleep")
                         
-                        row_html += f"""
-                        <td style="font-weight:700; color:{rec_color}; background:#F0F8FF;">{rec_score}%</td>
-                        <td style="font-weight:600; color:{hrv_color}; background:#F0F8FF;">{hrv}</td>
-                        <td style="font-weight:600; color:{sleep_color}; background:#F0F8FF;">{sleep}%</td>"""
+                        rec_disp = f"{str(rec_score).replace('%', '').strip()}%" if pd.notna(rec_score) and str(rec_score).strip() not in ["N/A", "nan", ""] else "-"
+                        hrv_disp = f"{hrv}" if pd.notna(hrv) and str(hrv).strip() not in ["N/A", "nan", ""] else "-"
+                        sleep_disp = f"{str(sleep).replace('%', '').strip()}%" if pd.notna(sleep) and str(sleep).strip() not in ["N/A", "nan", ""] else "-"
+                        
+                        row_html += (
+                            f'<td style="font-weight:800; color:{rec_color}; background:#F0F8FF;">{rec_disp}</td>'
+                            f'<td style="font-weight:800; color:{hrv_color}; background:#F0F8FF;">{hrv_disp}</td>'
+                            f'<td style="font-weight:800; color:{sleep_color}; background:#F0F8FF;">{sleep_disp}</td>'
+                        )
                     else:
-                        row_html += '<td style="background:#F0F8FF;">-</td><td style="background:#F0F8FF;">-</td><td style="background:#F0F8FF;">-</td>'
+                        row_html += '<td style="background:#F0F8FF; color:#64748B;">-</td><td style="background:#F0F8FF; color:#64748B;">-</td><td style="background:#F0F8FF; color:#64748B;">-</td>'
 
                 row_html += "</tr>"
                 row_dict["html"] = row_html
@@ -1554,48 +1699,32 @@ with testing_tab_wellness:
                 c_kpi3.metric("Optimal (>=90%)", peak_count)
                 c_kpi4.metric("Fatigued (<80%)", fatigue_count)
 
-                whoop_headers = ""
-                if selected_sport == "Golf":
-                    whoop_headers = """<th style="background:#0284C7; color:white;">Recovery Score</th>
-                    <th style="background:#0284C7; color:white;">Overnight HRV</th>
-                    <th style="background:#0284C7; color:white;">Sleep Perf.</th>"""
+                whoop_headers = (
+                    '<th style="background:#0284C7; color:white;">Recovery Score</th>'
+                    '<th style="background:#0284C7; color:white;">Overnight HRV</th>'
+                    '<th style="background:#0284C7; color:white;">Sleep Perf.</th>'
+                ) if selected_sport == "Golf" else ""
 
                 pos_header = '<th>Position</th>' if selected_sport != "Golf" else ""
 
-                team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
-                <thead>
-                    <tr style="background:#FF8200; color:white;">
-                        <th style="width:50px; padding:8px;">Photo</th>
-                        <th style="text-align:left !important; padding-left:15px;">Name</th>
-                        {pos_header}
-                        <th style="background:#82C6E2; color:#0F172A;">Wellness Score</th>
-                        <th>Readiness Status</th>
-                        <th>RSI-Mod</th>
-                        <th>Ecc Braking RFD</th>
-                        <th>Force @ 0 Velo</th>
-                        <th>Time to Takeoff</th>
-                        <th>P2:P1 Ratio</th>
-                        {whoop_headers}
-                    </tr>
-                </thead><tbody>"""
-                
-
-                team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
-                <thead>
-                    <tr style="background:#FF8200; color:white;">
-                        <th style="width:50px; padding:8px;">Photo</th>
-                        <th style="text-align:left !important; padding-left:15px;">Name</th>
-                        <th>Position</th>
-                        <th style="background:#82C6E2; color:#0F172A;">Wellness Score</th>
-                        <th>Readiness Status</th>
-                        <th>RSI-Mod</th>
-                        <th>Ecc Braking RFD</th>
-                        <th>Force @ 0 Velo</th>
-                        <th>Time to Takeoff</th>
-                        <th>P2:P1 Ratio</th>
-                        {whoop_headers}
-                    </tr>
-                </thead><tbody>"""
+                team_tbl_html = (
+                    '<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">'
+                    '<thead>'
+                    '<tr style="background:#FF8200; color:white;">'
+                    '<th style="width:50px; padding:8px;">Photo</th>'
+                    '<th style="text-align:left !important; padding-left:15px;">Name</th>'
+                    f'{pos_header}'
+                    '<th style="background:#82C6E2; color:#0F172A;">Wellness Score</th>'
+                    '<th>Readiness Status</th>'
+                    '<th>RSI-Mod</th>'
+                    '<th>Ecc Braking RFD</th>'
+                    '<th>Force @ 0 Velo</th>'
+                    '<th>Time to Takeoff</th>'
+                    '<th>P2:P1 Ratio</th>'
+                    f'{whoop_headers}'
+                    '</tr>'
+                    '</thead><tbody>'
+                )
                 
                 for _, row in cmj_team_df.iterrows():
                     team_tbl_html += row["html"]
@@ -1604,7 +1733,6 @@ with testing_tab_wellness:
                 st.markdown(team_tbl_html, unsafe_allow_html=True)
             else:
                 st.info(f"No Countermovement Jump testing records logged on {sel_team_cmj_date}.")
-
 # ==========================================
 # SECTION 5D: OVERALL PROFILE
 # ==========================================
