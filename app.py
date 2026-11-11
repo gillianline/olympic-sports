@@ -976,6 +976,7 @@ with testing_tab_cmj:
     st.markdown("<br>", unsafe_allow_html=True)
 
     if jump_view_mode == "Individual Athlete":
+        # Use the full dataset for the sport so we can track across multiple seasons
         sport_cmj_full = df_cmj_full[df_cmj_full['Sport'].astype(str) == selected_sport] if 'Sport' in df_cmj_full.columns else df_cmj_full.copy()
 
         c_filter1, c_filter2, _ = st.columns([1.5, 2, 1.5])
@@ -984,11 +985,13 @@ with testing_tab_cmj:
                 "Select Athlete:", roster_players, key=f"jump_player_select_{season_key}"
             )
         
+        # Get available seasons for this specific athlete
         ath_cmj_base = sport_cmj_full[sport_cmj_full["Name"] == selected_player_t]
         available_seasons = sorted(list(ath_cmj_base['Season'].dropna().astype(str).unique()), reverse=True) if 'Season' in ath_cmj_base.columns else []
         
         with c_filter2:
             if available_seasons:
+                # Default to the globally selected season if one is picked, otherwise show all
                 default_seasons = [selected_season] if selected_season != "All Seasons" and selected_season in available_seasons else available_seasons
                 jump_seasons = st.multiselect(
                     "Compare Seasons (Longitudinal Tracking):", 
@@ -1001,6 +1004,8 @@ with testing_tab_cmj:
 
         st.markdown("<br>", unsafe_allow_html=True)
         
+        # --- CMJ SECTION ---
+        # Apply the local season filter
         if jump_seasons and 'Season' in ath_cmj_base.columns:
             p_cmj = ath_cmj_base[ath_cmj_base['Season'].astype(str).isin(jump_seasons)].copy()
         else:
@@ -1019,6 +1024,7 @@ with testing_tab_cmj:
             if j_col:
                 p_cmj["Jump_Height_Clean"] = pd.to_numeric(p_cmj[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
                 
+                # --- TREND CHART ---
                 fig_jump_trend = go.Figure()
                 fig_jump_trend.add_trace(go.Scatter(
                     x=p_cmj["Date"], y=p_cmj["Jump_Height_Clean"],
@@ -1044,6 +1050,7 @@ with testing_tab_cmj:
                 )
                 st.plotly_chart(fig_jump_trend, use_container_width=True, key=f"cmj_trend_{season_key}")
 
+                # --- DATA TABLE ---
                 target_cols = ["Test Type", "Date", "BW [KG]"]
                 if j_col: target_cols.append(j_col)
                 target_cols.extend(["Peak Power [W]", "Eccentric Braking RFD [N/s]"])
@@ -1069,7 +1076,6 @@ with testing_tab_cmj:
                 st.dataframe(df_cmj_display, use_container_width=True, hide_index=True)
         else:
             st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in the selected season(s).")        
-
 
     elif jump_view_mode == "Team Summary":
         st.markdown(f"#### Team CMJ Summary ({season_label})")
@@ -1110,7 +1116,7 @@ with testing_tab_cmj:
             pic = meta['Picture'].iloc[0] if not meta.empty and 'Picture' in meta.columns else "https://www.w3schools.com/howto/img_avatar.png"
             pos = meta['Position'].iloc[0] if not meta.empty and 'Position' in meta.columns else "N/A"
             
-            row_dict = {
+            team_cmj_rows.append({
                 "pb_val": pb,
                 "html": f"""<tr style="border-bottom: 1px solid #E2E8F0;">
 <td style="padding:6px;"><img src="{pic}" style="width:32px; height:32px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
@@ -1118,17 +1124,13 @@ with testing_tab_cmj:
 <td style="font-weight:600; color:#64748B;">{pos}</td>
 <td style="font-weight:800; font-size:14px; color:#1D1D1F; background:#F8FAFC;">{pb:.1f} cm<br><span style="font-size:10px; color:#64748B; font-weight:600;">{pb_date}</span></td>
 <td>{recent_html}<br><span style="font-size:10px; color:#64748B;">{recent_date}</span></td>
-"""
-            }
-
-            row_dict["html"] += "</tr>"
-            team_cmj_rows.append(row_dict)
+</tr>"""
+            })
             
         if team_cmj_rows:
             team_cmj_rows.sort(key=lambda x: x["pb_val"], reverse=True)
             html_rows = "".join([r["html"] for r in team_cmj_rows])
             
-
             team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
 <thead>
 <tr style="background:#FF8200; color:white;">
@@ -1137,7 +1139,6 @@ with testing_tab_cmj:
 <th>Position</th>
 <th style="background:#82C6E2; color:#0F172A;">Personal Best (PB)</th>
 <th>Most Recent Jump</th>
-{whoop_headers}
 </tr>
 </thead><tbody>
 {html_rows}
