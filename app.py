@@ -1411,7 +1411,7 @@ with testing_tab_wellness:
 
                 meta_row = filtered_roster[filtered_roster["Name"] == ath_name]
                 pos_str = meta_row["Position"].iloc[0] if not meta_row.empty and "Position" in meta_row.columns else "N/A"
-                photo_url = meta_row["Picture"].iloc[0] if not meta_row.empty and "Picture" in meta_url.columns else "https://www.w3schools.com/howto/img_avatar.png"
+                photo_url = meta_row["Picture"].iloc[0] if not meta_row.empty and "Picture" in meta_row.columns else "https://www.w3schools.com/howto/img_avatar.png"
                 
                 if team_pos_f != "All Positions" and pos_str != team_pos_f:
                     continue
@@ -1485,13 +1485,13 @@ with testing_tab_wellness:
                     "P2P1_c": get_pct_color(indiv_scores.get("P2P1"))
                 }
 
+                # Construct base row HTML
                 r_val = readiness_pct
                 status_text = "Optimal Readiness" if r_val >= 90 else ("Moderate Fatigue" if r_val >= 80 else "High Fatigue Risk")
                 badge_bg = "#DCFCE7" if r_val >= 90 else ("#FEF3C7" if r_val >= 80 else "#FEE2E2")
                 badge_fg = "#15803D" if r_val >= 90 else ("#B45309" if r_val >= 80 else "#B91C1C")
 
-                pos_str_display = pos_str if pd.notna(pos_str) and str(pos_str).strip() != "nan" else "-"
-                pos_cell = f'<td style="font-weight:600; color:#64748B;">{pos_str_display}</td>' if selected_sport != "Golf" else ""
+                pos_cell = f'<td style="font-weight:600; color:#64748B;">{pos_str}</td>' if selected_sport != "Golf" else ""
 
                 row_html = f"""<tr style="border-bottom: 1px solid #E2E8F0;">
                     <td style="padding:6px;"><img src="{photo_url}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
@@ -1505,7 +1505,19 @@ with testing_tab_wellness:
                     <td style="font-weight:800; color:{row_dict['TTO_c']};">{row_dict['Time_Takeoff']}</td>
                     <td style="font-weight:800; color:{row_dict['P2P1_c']};">{row_dict['P2P1']}</td>"""
 
-                # Inject Golf Whoop columns with color-coded numbers and light blue background shading
+                row_html = f"""<tr style="border-bottom: 1px solid #E2E8F0;">
+                    <td style="padding:6px;"><img src="{photo_url}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
+                    <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath_name}</td>
+                    <td style="font-weight:600; color:#64748B;">{pos_str}</td>
+                    <td style="font-weight:900; font-size:15px; color:{z_color}; background:#F8FAFC;">{readiness_pct}%</td>
+                    <td><span style="background-color:{badge_bg}; color:{badge_fg}; padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.75rem; white-space:nowrap;">{status_text}</span></td>
+                    <td style="font-weight:800; color:{row_dict['mRSI_c']};">{row_dict['mRSI']}</td>
+                    <td style="font-weight:800; color:{row_dict['Ecc_RFD_c']};">{row_dict['Ecc_RFD']}</td>
+                    <td style="font-weight:800; color:{row_dict['F0V_c']};">{row_dict['F0V']}</td>
+                    <td style="font-weight:800; color:{row_dict['TTO_c']};">{row_dict['Time_Takeoff']}</td>
+                    <td style="font-weight:800; color:{row_dict['P2P1_c']};">{row_dict['P2P1']}</td>"""
+
+                # Inject Golf Whoop columns with color-coded numbers and light blue shading
                 if selected_sport == "Golf" and not whoop_data.empty:
                     ath_w = whoop_data[whoop_data['Name'] == ath_name]
                     if not ath_w.empty:
@@ -1556,6 +1568,24 @@ with testing_tab_wellness:
                         <th style="width:50px; padding:8px;">Photo</th>
                         <th style="text-align:left !important; padding-left:15px;">Name</th>
                         {pos_header}
+                        <th style="background:#82C6E2; color:#0F172A;">Wellness Score</th>
+                        <th>Readiness Status</th>
+                        <th>RSI-Mod</th>
+                        <th>Ecc Braking RFD</th>
+                        <th>Force @ 0 Velo</th>
+                        <th>Time to Takeoff</th>
+                        <th>P2:P1 Ratio</th>
+                        {whoop_headers}
+                    </tr>
+                </thead><tbody>"""
+                
+
+                team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
+                <thead>
+                    <tr style="background:#FF8200; color:white;">
+                        <th style="width:50px; padding:8px;">Photo</th>
+                        <th style="text-align:left !important; padding-left:15px;">Name</th>
+                        <th>Position</th>
                         <th style="background:#82C6E2; color:#0F172A;">Wellness Score</th>
                         <th>Readiness Status</th>
                         <th>RSI-Mod</th>
