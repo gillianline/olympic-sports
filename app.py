@@ -123,11 +123,16 @@ def load_data():
     df_ash = pd.read_csv(st.secrets["sheet_ash"]) 
     df_grip = pd.read_csv(st.secrets["sheet_grip"])
     
-    # Clean up column names: remove hidden spaces and fix capitalization
-    for df in [df_ff, df_roster, df_cmj, df_bs, df_nb, df_dj, df_ash, df_grip]:
+    # NEW: Load WHOOP sheet safely
+    try:
+        df_whoop = pd.read_csv(st.secrets["sheet_whoop"])
+    except Exception:
+        df_whoop = pd.DataFrame(columns=["Name", "Date Tested", "Whoop Recovery Score (%)", "Overnight HRV", "Sleep Performance", "Sport"])
+    
+    for df in [df_ff, df_roster, df_cmj, df_bs, df_nb, df_dj, df_ash, df_grip, df_whoop]:
+        if df.empty: continue
         df.columns = df.columns.str.strip()
         
-        # Bulletproof: Force any variation of "season" or "sport" to be capitalized correctly
         rename_map = {}
         for col in df.columns:
             if col.lower() == 'season': rename_map[col] = 'Season'
@@ -140,8 +145,8 @@ def load_data():
     if "Date UTC" in df_nb.columns:
         df_nb = df_nb.rename(columns={"Date UTC": "Date"})
     
-    # Smart Merge: Drop overlapping columns from roster before merging 
     def smart_merge(main_df, roster_df):
+        if main_df.empty: return main_df
         cols_to_drop = [c for c in roster_df.columns if c in main_df.columns and c != "Name"]
         clean_roster = roster_df.drop(columns=cols_to_drop)
         return pd.merge(main_df, clean_roster, on="Name", how="left")
@@ -153,15 +158,12 @@ def load_data():
     df_dj = smart_merge(df_dj, df_roster)
     df_ash = smart_merge(df_ash, df_roster)
     df_grip = smart_merge(df_grip, df_roster)
+    df_whoop = smart_merge(df_whoop, df_roster)
     
-    return df_ff, df_cmj, df_bs, df_nb, df_dj, df_ash, df_grip, df_roster
+    return df_ff, df_cmj, df_bs, df_nb, df_dj, df_ash, df_grip, df_whoop, df_roster
 
-try:
-    df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_ash_full, df_grip_full, df_roster = load_data()
-except Exception as e:
-    st.error("Error loading secure data. Please check your sheet links in secrets.toml.")
-    st.stop()
-
+# Update your call to unpack df_whoop_full:
+df_forceframe, df_cmj_full, df_bs_full, df_nb_full, df_dj_full, df_ash_full, df_grip_full, df_whoop_full, df_roster = load_data()
 
 # ==========================================
 # 3. DASHBOARD UI & SIDEBAR
@@ -931,7 +933,7 @@ if testing_tab_intake is not None:
 
 
 # ==========================================
-# SECTION 5B: CMJ JUMP TAB
+# SECTION 5B: CMJ JUMP TAB (CONTAINING WHOOP FOR GOLF)
 # ==========================================
 with testing_tab_cmj:
     st.markdown(
@@ -943,7 +945,6 @@ with testing_tab_cmj:
     st.markdown("<br>", unsafe_allow_html=True)
 
     if jump_view_mode == "Individual Athlete":
-        # Use the full dataset for the sport so we can track across multiple seasons
         sport_cmj_full = df_cmj_full[df_cmj_full['Sport'].astype(str) == selected_sport] if 'Sport' in df_cmj_full.columns else df_cmj_full.copy()
 
         c_filter1, c_filter2, _ = st.columns([1.5, 2, 1.5])
@@ -952,13 +953,11 @@ with testing_tab_cmj:
                 "Select Athlete:", roster_players, key=f"jump_player_select_{season_key}"
             )
         
-        # Get available seasons for this specific athlete
         ath_cmj_base = sport_cmj_full[sport_cmj_full["Name"] == selected_player_t]
         available_seasons = sorted(list(ath_cmj_base['Season'].dropna().astype(str).unique()), reverse=True) if 'Season' in ath_cmj_base.columns else []
         
         with c_filter2:
             if available_seasons:
-                # Default to the globally selected season if one is picked, otherwise show all
                 default_seasons = [selected_season] if selected_season != "All Seasons" and selected_season in available_seasons else available_seasons
                 jump_seasons = st.multiselect(
                     "Compare Seasons (Longitudinal Tracking):", 
@@ -971,8 +970,6 @@ with testing_tab_cmj:
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- CMJ SECTION ---
-        # Apply the local season filter
         if jump_seasons and 'Season' in ath_cmj_base.columns:
             p_cmj = ath_cmj_base[ath_cmj_base['Season'].astype(str).isin(jump_seasons)].copy()
         else:
@@ -991,7 +988,6 @@ with testing_tab_cmj:
             if j_col:
                 p_cmj["Jump_Height_Clean"] = pd.to_numeric(p_cmj[j_col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")
                 
-                # --- TREND CHART ---
                 fig_jump_trend = go.Figure()
                 fig_jump_trend.add_trace(go.Scatter(
                     x=p_cmj["Date"], y=p_cmj["Jump_Height_Clean"],
@@ -1017,7 +1013,6 @@ with testing_tab_cmj:
                 )
                 st.plotly_chart(fig_jump_trend, use_container_width=True, key=f"cmj_trend_{season_key}")
 
-                # --- DATA TABLE ---
                 target_cols = ["Test Type", "Date", "BW [KG]"]
                 if j_col: target_cols.append(j_col)
                 target_cols.extend(["Peak Power [W]", "Eccentric Braking RFD [N/s]"])
@@ -1044,11 +1039,20 @@ with testing_tab_cmj:
         else:
             st.info(f"No Countermovement Jump (CMJ) logs found for {selected_player_t} in the selected season(s).")        
 
+        # --- GOLF WHOOP INDIVIDUAL DISPLAY ---
+        if selected_sport == "Golf":
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(f"#### WHOOP Recovery & Sleep Log ({selected_player_t})")
+            ath_whoop = whoop_data[whoop_data['Name'] == selected_player_t] if not whoop_data.empty else pd.DataFrame()
+            if not ath_whoop.empty:
+                st.dataframe(ath_whoop[["Date Tested", "Whoop Recovery Score (%)", "Overnight HRV", "Sleep Performance"]], use_container_width=True, hide_index=True)
+            else:
+                st.info("No WHOOP records found for this athlete.")
+
     elif jump_view_mode == "Team Summary":
         st.markdown(f"#### Team CMJ Summary ({season_label})")
         
         team_cmj_rows = []
-        # Uses filtered_cmj to ensure we strictly obey the globally selected season
         for ath in roster_players:
             ath_cmj = filtered_cmj[filtered_cmj['Name'] == ath].sort_values("Date")
             if ath_cmj.empty: continue
@@ -1060,12 +1064,10 @@ with testing_tab_cmj:
             valid_jumps = ath_cmj.dropna(subset=["JH_Clean"])
             if valid_jumps.empty: continue
             
-            # Find PB and PB Date
             pb = valid_jumps["JH_Clean"].max()
             pb_row = valid_jumps[valid_jumps["JH_Clean"] == pb].sort_values("Date").iloc[-1]
             pb_date = format_date_clean(pb_row["Date"])
 
-            # Find Most Recent Jump and Date
             recent = valid_jumps.iloc[-1]["JH_Clean"]
             recent_date = format_date_clean(valid_jumps.iloc[-1]["Date"])
             diff = recent - pb
@@ -1086,7 +1088,7 @@ with testing_tab_cmj:
             pic = meta['Picture'].iloc[0] if not meta.empty and 'Picture' in meta.columns else "https://www.w3schools.com/howto/img_avatar.png"
             pos = meta['Position'].iloc[0] if not meta.empty and 'Position' in meta.columns else "N/A"
             
-            team_cmj_rows.append({
+            row_dict = {
                 "pb_val": pb,
                 "html": f"""<tr style="border-bottom: 1px solid #E2E8F0;">
 <td style="padding:6px;"><img src="{pic}" style="width:32px; height:32px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
@@ -1094,14 +1096,36 @@ with testing_tab_cmj:
 <td style="font-weight:600; color:#64748B;">{pos}</td>
 <td style="font-weight:800; font-size:14px; color:#1D1D1F; background:#F8FAFC;">{pb:.1f} cm<br><span style="font-size:10px; color:#64748B; font-weight:600;">{pb_date}</span></td>
 <td>{recent_html}<br><span style="font-size:10px; color:#64748B;">{recent_date}</span></td>
-</tr>"""
-            })
+"""
+            }
+
+            # If Golf, append WHOOP metrics to table columns
+            if selected_sport == "Golf" and not whoop_data.empty:
+                ath_w = whoop_data[whoop_data['Name'] == ath]
+                if not ath_w.empty:
+                    latest_w = ath_w.sort_values("Date").iloc[-1]
+                    rec_score = latest_w.get("Whoop Recovery Score (%)", "N/A")
+                    hrv = latest_w.get("Overnight HRV", "N/A")
+                    sleep = latest_w.get("Sleep Performance", "N/A")
+                    row_dict["html"] += f"""<td style="font-weight:700; color:#0284C7;">{rec_score}%</td>
+<td style="font-weight:600;">{hrv}</td>
+<td style="font-weight:600;">{sleep}%</td>"""
+                else:
+                    row_dict["html"] += "<td>-</td><td>-</td><td>-</td>"
+
+            row_dict["html"] += "</tr>"
+            team_cmj_rows.append(row_dict)
             
         if team_cmj_rows:
-            # Sort by Personal Best descending
             team_cmj_rows.sort(key=lambda x: x["pb_val"], reverse=True)
             html_rows = "".join([r["html"] for r in team_cmj_rows])
             
+            whoop_headers = ""
+            if selected_sport == "Golf":
+                whoop_headers = """<th style="background:#0284C7; color:white;">Recovery Score</th>
+<th style="background:#0284C7; color:white;">Overnight HRV</th>
+<th style="background:#0284C7; color:white;">Sleep Perf.</th>"""
+
             team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
 <thead>
 <tr style="background:#FF8200; color:white;">
@@ -1110,6 +1134,7 @@ with testing_tab_cmj:
 <th>Position</th>
 <th style="background:#82C6E2; color:#0F172A;">Personal Best (PB)</th>
 <th>Most Recent Jump</th>
+{whoop_headers}
 </tr>
 </thead><tbody>
 {html_rows}
@@ -1117,7 +1142,7 @@ with testing_tab_cmj:
             st.markdown(team_tbl_html, unsafe_allow_html=True)
         else:
             st.info(f"No CMJ records found for the team in {season_label}.")
-        
+            
 # ==========================================
 # SECTION 5C: WELLNESS JUMP TAB
 # ==========================================
@@ -1659,7 +1684,7 @@ with testing_tab_wellness:
                 
 
 # ==========================================
-# SECTION 5D: OVERALL PROFILE
+# SECTION 5D: OVERALL PROFILE (ADD GOLF WHOOP SUMMARY)
 # ==========================================
 with testing_tab_overall:
     st.markdown(
@@ -1840,6 +1865,22 @@ with testing_tab_overall:
         val, dt = get_formatted_peak_overall(p_ank_ov)
         if val:
             records.append({"Category": "Ankle Plantar Flexion (L/R)", "Best Test Value": val, "Date Achieved": dt})
+
+    # Append WHOOP Record for Golf
+    if selected_sport == "Golf" and not whoop_data.empty:
+        p_whoop_ov = whoop_data[whoop_data["Name"] == selected_ov_athlete]
+        if not p_whoop_ov.empty:
+            latest_w_rec = p_whoop_ov.sort_values("Date").iloc[-1]
+            records.append({
+                "Category": "WHOOP Recovery Score",
+                "Best Test Value": f"{latest_w_rec.get('Whoop Recovery Score (%)', 'N/A')}%",
+                "Date Achieved": format_date_clean(latest_w_rec.get("Date"))
+            })
+            records.append({
+                "Category": "WHOOP Overnight HRV",
+                "Best Test Value": str(latest_w_rec.get('Overnight HRV', 'N/A')),
+                "Date Achieved": format_date_clean(latest_w_rec.get("Date"))
+            })
 
     if records:
         ov_df = pd.DataFrame(records)
