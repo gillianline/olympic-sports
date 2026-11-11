@@ -292,6 +292,28 @@ def render_vball_table(df):
     """Simple HTML table formatter to match CSS classes"""
     return df.to_html(classes="table table-striped", index=False, escape=False)
 
+def get_whoop_color(val, metric_type="recovery"):
+    """Returns green, yellow, or red color based on WHOOP thresholds"""
+    try:
+        num = float(str(val).replace("%", "").strip())
+    except:
+        return "#1D1D1F"
+    
+    if metric_type == "recovery":
+        # Green >= 67%, Yellow 34%-66%, Red < 34%
+        if num >= 67: return "#15803D"
+        elif num >= 34: return "#D97706"
+        else: return "#B91C1C"
+    elif metric_type == "sleep":
+        if num >= 85: return "#15803D"
+        elif num >= 70: return "#D97706"
+        else: return "#B91C1C"
+    elif metric_type == "hrv":
+        if num >= 70: return "#15803D"
+        elif num >= 45: return "#D97706"
+        else: return "#B91C1C"
+    return "#1D1D1F"
+
 
 # ==========================================
 # 5. DATA PREPARATION FOR HUD
