@@ -1495,19 +1495,26 @@ with testing_tab_wellness:
                     <td style="font-weight:800; color:{row_dict['TTO_c']};">{row_dict['Time_Takeoff']}</td>
                     <td style="font-weight:800; color:{row_dict['P2P1_c']};">{row_dict['P2P1']}</td>"""
 
-                # Inject Golf Whoop columns into team summary table row if selected sport is Golf
+                # Inject Golf Whoop columns with color-coded numbers and light blue shading
                 if selected_sport == "Golf" and not whoop_data.empty:
                     ath_w = whoop_data[whoop_data['Name'] == ath_name]
                     if not ath_w.empty:
                         latest_w = ath_w.sort_values("Date").iloc[-1]
+                        
                         rec_score = latest_w.get("Whoop Recovery Score (%)", "N/A")
                         hrv = latest_w.get("Overnight HRV", "N/A")
                         sleep = latest_w.get("Sleep Performance", "N/A")
-                        row_html += f"""<td style="font-weight:700; color:#0284C7;">{rec_score}%</td>
-                        <td style="font-weight:600;">{hrv}</td>
-                        <td style="font-weight:600;">{sleep}%</td>"""
+                        
+                        rec_color = get_whoop_color(rec_score, "recovery")
+                        hrv_color = get_whoop_color(hrv, "hrv")
+                        sleep_color = get_whoop_color(sleep, "sleep")
+                        
+                        row_html += f"""
+                        <td style="font-weight:700; color:{rec_color}; background:#F0F8FF;">{rec_score}%</td>
+                        <td style="font-weight:600; color:{hrv_color}; background:#F0F8FF;">{hrv}</td>
+                        <td style="font-weight:600; color:{sleep_color}; background:#F0F8FF;">{sleep}%</td>"""
                     else:
-                        row_html += "<td>-</td><td>-</td><td>-</td>"
+                        row_html += '<td style="background:#F0F8FF;">-</td><td style="background:#F0F8FF;">-</td><td style="background:#F0F8FF;">-</td>'
 
                 row_html += "</tr>"
                 row_dict["html"] = row_html
