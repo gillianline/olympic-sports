@@ -1301,7 +1301,9 @@ with testing_tab_wellness:
             top_col1, top_col2, top_col3 = st.columns([1.2, 2.2, 1.6])
             
             with top_col1:
-                ath_card_html = f"""<div style="background:#4895DB; color:white; font-weight:900; font-size:18px; text-align:center; padding:8px 10px; border-radius:6px 6px 0 0;">{sel_cmj_ath}</div><div style="border:1px solid #E2E8F0; border-top:none; border-radius:0 0 6px 6px; padding:16px; background:white; display:flex; align-items:center; gap:16px;"><img src="{photo_val}" style="width:95px; height:95px; border-radius:8px; object-fit:contain; border:2px solid #FF8200;"><div style="font-size:14px; line-height:1.8; color:#1D1D1F;"><b>Position:</b> {pos_val}</div></div>"""
+                pos_display_html = f'<div style="font-size:14px; line-height:1.8; color:#1D1D1F;"><b>Position:</b> {pos_val}</div>' if selected_sport != "Golf" else ""
+
+                ath_card_html = f"""<div style="background:#4895DB; color:white; font-weight:900; font-size:18px; text-align:center; padding:8px 10px; border-radius:6px 6px 0 0;">{sel_cmj_ath}</div><div style="border:1px solid #E2E8F0; border-top:none; border-radius:0 0 6px 6px; padding:16px; background:white; display:flex; align-items:center; gap:16px;"><img src="{photo_val}" style="width:95px; height:95px; border-radius:8px; object-fit:contain; border:2px solid #FF8200;"><div>{pos_display_html}</div></div>"""
                 st.markdown(ath_card_html, unsafe_allow_html=True)
                 comp_factor = st.selectbox(
                     "Comparison Factor",
@@ -1461,6 +1463,20 @@ with testing_tab_wellness:
                 badge_bg = "#DCFCE7" if r_val >= 90 else ("#FEF3C7" if r_val >= 80 else "#FEE2E2")
                 badge_fg = "#15803D" if r_val >= 90 else ("#B45309" if r_val >= 80 else "#B91C1C")
 
+                pos_cell = f'<td style="font-weight:600; color:#64748B;">{pos_str}</td>' if selected_sport != "Golf" else ""
+
+                row_html = f"""<tr style="border-bottom: 1px solid #E2E8F0;">
+                    <td style="padding:6px;"><img src="{photo_url}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
+                    <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath_name}</td>
+                    {pos_cell}
+                    <td style="font-weight:900; font-size:15px; color:{z_color}; background:#F8FAFC;">{readiness_pct}%</td>
+                    <td><span style="background-color:{badge_bg}; color:{badge_fg}; padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.75rem; white-space:nowrap;">{status_text}</span></td>
+                    <td style="font-weight:800; color:{row_dict['mRSI_c']};">{row_dict['mRSI']}</td>
+                    <td style="font-weight:800; color:{row_dict['Ecc_RFD_c']};">{row_dict['Ecc_RFD']}</td>
+                    <td style="font-weight:800; color:{row_dict['F0V_c']};">{row_dict['F0V']}</td>
+                    <td style="font-weight:800; color:{row_dict['TTO_c']};">{row_dict['Time_Takeoff']}</td>
+                    <td style="font-weight:800; color:{row_dict['P2P1_c']};">{row_dict['P2P1']}</td>"""
+
                 row_html = f"""<tr style="border-bottom: 1px solid #E2E8F0;">
                     <td style="padding:6px;"><img src="{photo_url}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
                     <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath_name}</td>
@@ -1508,6 +1524,26 @@ with testing_tab_wellness:
                     whoop_headers = """<th style="background:#0284C7; color:white;">Recovery Score</th>
                     <th style="background:#0284C7; color:white;">Overnight HRV</th>
                     <th style="background:#0284C7; color:white;">Sleep Perf.</th>"""
+
+                pos_header = '<th>Position</th>' if selected_sport != "Golf" else ""
+
+                team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
+                <thead>
+                    <tr style="background:#FF8200; color:white;">
+                        <th style="width:50px; padding:8px;">Photo</th>
+                        <th style="text-align:left !important; padding-left:15px;">Name</th>
+                        {pos_header}
+                        <th style="background:#82C6E2; color:#0F172A;">Wellness Score</th>
+                        <th>Readiness Status</th>
+                        <th>RSI-Mod</th>
+                        <th>Ecc Braking RFD</th>
+                        <th>Force @ 0 Velo</th>
+                        <th>Time to Takeoff</th>
+                        <th>P2:P1 Ratio</th>
+                        {whoop_headers}
+                    </tr>
+                </thead><tbody>"""
+                
 
                 team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
                 <thead>
