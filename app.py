@@ -1116,7 +1116,7 @@ with testing_tab_cmj:
             pic = meta['Picture'].iloc[0] if not meta.empty and 'Picture' in meta.columns else "https://www.w3schools.com/howto/img_avatar.png"
             pos = meta['Position'].iloc[0] if not meta.empty and 'Position' in meta.columns else "N/A"
             
-            # Omit position cell if Golf
+            # Conditionally render position cell only if sport is NOT Golf
             pos_cell = f'<td style="font-weight:600; color:#64748B;">{pos}</td>' if selected_sport != "Golf" else ""
 
             team_cmj_rows.append({
@@ -1134,7 +1134,7 @@ with testing_tab_cmj:
             team_cmj_rows.sort(key=lambda x: x["pb_val"], reverse=True)
             html_rows = "".join([r["html"] for r in team_cmj_rows])
             
-            # Omit position header if Golf
+            # Conditionally render position header only if sport is NOT Golf
             pos_header = '<th>Position</th>' if selected_sport != "Golf" else ""
 
             team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
@@ -1483,6 +1483,18 @@ with testing_tab_wellness:
                     <td style="font-weight:800; color:{row_dict['TTO_c']};">{row_dict['Time_Takeoff']}</td>
                     <td style="font-weight:800; color:{row_dict['P2P1_c']};">{row_dict['P2P1']}</td>"""
 
+                row_html = f"""<tr style="border-bottom: 1px solid #E2E8F0;">
+                    <td style="padding:6px;"><img src="{photo_url}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
+                    <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath_name}</td>
+                    <td style="font-weight:600; color:#64748B;">{pos_str}</td>
+                    <td style="font-weight:900; font-size:15px; color:{z_color}; background:#F8FAFC;">{readiness_pct}%</td>
+                    <td><span style="background-color:{badge_bg}; color:{badge_fg}; padding:4px 10px; border-radius:12px; font-weight:700; font-size:0.75rem; white-space:nowrap;">{status_text}</span></td>
+                    <td style="font-weight:800; color:{row_dict['mRSI_c']};">{row_dict['mRSI']}</td>
+                    <td style="font-weight:800; color:{row_dict['Ecc_RFD_c']};">{row_dict['Ecc_RFD']}</td>
+                    <td style="font-weight:800; color:{row_dict['F0V_c']};">{row_dict['F0V']}</td>
+                    <td style="font-weight:800; color:{row_dict['TTO_c']};">{row_dict['Time_Takeoff']}</td>
+                    <td style="font-weight:800; color:{row_dict['P2P1_c']};">{row_dict['P2P1']}</td>"""
+
                 # Inject Golf Whoop columns into team summary table row if selected sport is Golf
                 if selected_sport == "Golf" and not whoop_data.empty:
                     ath_w = whoop_data[whoop_data['Name'] == ath_name]
@@ -1538,6 +1550,23 @@ with testing_tab_wellness:
                     </tr>
                 </thead><tbody>"""
                 
+
+                team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
+                <thead>
+                    <tr style="background:#FF8200; color:white;">
+                        <th style="width:50px; padding:8px;">Photo</th>
+                        <th style="text-align:left !important; padding-left:15px;">Name</th>
+                        <th>Position</th>
+                        <th style="background:#82C6E2; color:#0F172A;">Wellness Score</th>
+                        <th>Readiness Status</th>
+                        <th>RSI-Mod</th>
+                        <th>Ecc Braking RFD</th>
+                        <th>Force @ 0 Velo</th>
+                        <th>Time to Takeoff</th>
+                        <th>P2:P1 Ratio</th>
+                        {whoop_headers}
+                    </tr>
+                </thead><tbody>"""
                 
                 for _, row in cmj_team_df.iterrows():
                     team_tbl_html += row["html"]
