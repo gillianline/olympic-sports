@@ -233,6 +233,7 @@ if selected_season != "All Seasons":
     if 'Season' in filtered_dj.columns: filtered_dj = filtered_dj[filtered_dj['Season'].astype(str) == selected_season]
     if 'Season' in filtered_ash.columns: filtered_ash = filtered_ash[filtered_ash['Season'].astype(str) == selected_season]
     if 'Season' in filtered_grip.columns: filtered_grip = filtered_grip[filtered_grip['Season'].astype(str) == selected_season]
+    if 'Season' in filtered_whoop.columns: filtered_whoop = filtered_whoop[filtered_whoop['Season'].astype(str) == selected_season]
 
 # Apply Sport Filter Downstream
 if selected_sport != "All Sports":
@@ -243,6 +244,7 @@ if selected_sport != "All Sports":
     if 'Sport' in filtered_dj.columns: filtered_dj = filtered_dj[filtered_dj['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_ash.columns: filtered_ash = filtered_ash[filtered_ash['Sport'].astype(str) == selected_sport]
     if 'Sport' in filtered_grip.columns: filtered_grip = filtered_grip[filtered_grip['Sport'].astype(str) == selected_sport]
+    if 'Sport' in filtered_whoop.columns: filtered_whoop = filtered_whoop[filtered_whoop['Sport'].astype(str) == selected_sport]
 
 # Apply Player Filter Downstream
 if selected_player != "All Players":
@@ -253,6 +255,7 @@ if selected_player != "All Players":
     filtered_dj = filtered_dj[filtered_dj['Name'].astype(str) == selected_player]
     filtered_ash = filtered_ash[filtered_ash['Name'].astype(str) == selected_player]
     filtered_grip = filtered_grip[filtered_grip['Name'].astype(str) == selected_player]
+    filtered_whoop = filtered_whoop[filtered_whoop['Name'].astype(str) == selected_player]
 
 # ==========================================
 # 4. HELPER FUNCTIONS
@@ -320,6 +323,12 @@ if not filtered_grip.empty and 'Date' in filtered_grip.columns:
     filtered_grip['Date'] = pd.to_datetime(filtered_grip['Date'], errors='coerce')
     filtered_grip['Date_Str'] = filtered_grip['Date'].dt.strftime("%m/%d/%y")
 grip_data = filtered_grip.copy()
+
+# ---- WHOOP DATA PREP ----
+if not filtered_whoop.empty and 'Date Tested' in filtered_whoop.columns:
+    filtered_whoop['Date'] = pd.to_datetime(filtered_whoop['Date Tested'], errors='coerce')
+    filtered_whoop['Date_Str'] = filtered_whoop['Date'].dt.strftime("%m/%d/%y")
+whoop_data = filtered_whoop.copy()
 
 season_label = selected_season if selected_season != "All Seasons" else "All Seasons"
 season_key = season_label.replace(" ", "_").lower()
