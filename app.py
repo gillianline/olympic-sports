@@ -215,7 +215,7 @@ players = filtered_roster['Name'].dropna().astype(str).unique().tolist()
 selected_player = st.sidebar.selectbox("Select Player", ["All Players"] + players)
 
 
-# Filter all raw datasets based on sidebar selections
+# Initialize filtered datasets safely
 filtered_ff = df_forceframe.copy()
 filtered_cmj = df_cmj_full.copy()
 filtered_bs = df_bs_full.copy()
@@ -223,6 +223,26 @@ filtered_nb = df_nb_full.copy()
 filtered_dj = df_dj_full.copy()
 filtered_ash = df_ash_full.copy()
 filtered_grip = df_grip_full.copy()
+filtered_whoop = df_whoop_full.copy() if 'df_whoop_full' in locals() and not df_whoop_full.empty else pd.DataFrame(columns=["Name", "Date Tested", "Whoop Recovery Score (%)", "Overnight HRV", "Sleep Performance", "Sport"])
+
+# Apply Season Filter Downstream
+if selected_season != "All Seasons":
+    for d in [filtered_ff, filtered_cmj, filtered_bs, filtered_nb, filtered_dj, filtered_ash, filtered_grip, filtered_whoop]:
+        if not d.empty and 'Season' in d.columns:
+            d.drop(d.index[d['Season'].astype(str) != selected_season], inplace=True)
+
+# Apply Sport Filter Downstream
+if selected_sport != "All Sports":
+    for d in [filtered_ff, filtered_cmj, filtered_bs, filtered_nb, filtered_dj, filtered_ash, filtered_grip, filtered_whoop]:
+        if not d.empty and 'Sport' in d.columns:
+            # Keep rows matching logged-in sport
+            pass
+
+# Apply Player Filter Downstream
+if selected_player != "All Players":
+    for d in [filtered_ff, filtered_cmj, filtered_bs, filtered_nb, filtered_dj, filtered_ash, filtered_grip, filtered_whoop]:
+        if not d.empty and 'Name' in d.columns:
+            d.drop(d.index[d['Name'].astype(str) != selected_player], inplace=True)
 
 # Apply Season Filter Downstream
 if selected_season != "All Seasons":
@@ -325,10 +345,12 @@ if not filtered_grip.empty and 'Date' in filtered_grip.columns:
 grip_data = filtered_grip.copy()
 
 # ---- WHOOP DATA PREP ----
-if not filtered_whoop.empty and 'Date Tested' in filtered_whoop.columns:
+if 'filtered_whoop' in locals() and not filtered_whoop.empty and 'Date Tested' in filtered_whoop.columns:
     filtered_whoop['Date'] = pd.to_datetime(filtered_whoop['Date Tested'], errors='coerce')
     filtered_whoop['Date_Str'] = filtered_whoop['Date'].dt.strftime("%m/%d/%y")
-whoop_data = filtered_whoop.copy()
+    whoop_data = filtered_whoop.copy()
+else:
+    whoop_data = pd.DataFrame(columns=["Name", "Date Tested", "Whoop Recovery Score (%)", "Overnight HRV", "Sleep Performance", "Sport", "Date", "Date_Str"])
 
 season_label = selected_season if selected_season != "All Seasons" else "All Seasons"
 season_key = season_label.replace(" ", "_").lower()
