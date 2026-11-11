@@ -1116,12 +1116,15 @@ with testing_tab_cmj:
             pic = meta['Picture'].iloc[0] if not meta.empty and 'Picture' in meta.columns else "https://www.w3schools.com/howto/img_avatar.png"
             pos = meta['Position'].iloc[0] if not meta.empty and 'Position' in meta.columns else "N/A"
             
+            # Conditionally render position cell only if sport is NOT Golf
+            pos_cell = f'<td style="font-weight:600; color:#64748B;">{pos}</td>' if selected_sport != "Golf" else ""
+
             team_cmj_rows.append({
                 "pb_val": pb,
                 "html": f"""<tr style="border-bottom: 1px solid #E2E8F0;">
 <td style="padding:6px;"><img src="{pic}" style="width:32px; height:32px; border-radius:50%; object-fit:contain; border:2px solid #FF8200;"></td>
 <td style="text-align:left !important; font-weight:800; padding-left:15px; font-size:13px; color:#1D1D1F;">{ath}</td>
-<td style="font-weight:600; color:#64748B;">{pos}</td>
+{pos_cell}
 <td style="font-weight:800; font-size:14px; color:#1D1D1F; background:#F8FAFC;">{pb:.1f} cm<br><span style="font-size:10px; color:#64748B; font-weight:600;">{pb_date}</span></td>
 <td>{recent_html}<br><span style="font-size:10px; color:#64748B;">{recent_date}</span></td>
 </tr>"""
@@ -1131,12 +1134,15 @@ with testing_tab_cmj:
             team_cmj_rows.sort(key=lambda x: x["pb_val"], reverse=True)
             html_rows = "".join([r["html"] for r in team_cmj_rows])
             
+            # Conditionally render position header only if sport is NOT Golf
+            pos_header = '<th>Position</th>' if selected_sport != "Golf" else ""
+
             team_tbl_html = f"""<table class="scout-table" style="width:100%; border:1px solid #E2E8F0; background:white; margin-top:15px; text-align:center; font-size:12px; border-collapse: collapse;">
 <thead>
 <tr style="background:#FF8200; color:white;">
 <th style="width:50px; padding:8px;">Photo</th>
 <th style="text-align:left !important; padding-left:15px;">Name</th>
-<th>Position</th>
+{pos_header}
 <th style="background:#82C6E2; color:#0F172A;">Personal Best (PB)</th>
 <th>Most Recent Jump</th>
 </tr>
