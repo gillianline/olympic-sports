@@ -1001,7 +1001,7 @@ if testing_tab_ash is not None:
             unsafe_allow_html=True,
         )
 
-        # Pull from full sport dataset so multi-season longitudinal tracking works
+        # Use filtered ash_data first (already obeys season/sport), or df_ash_full for multi-season
         sport_ash_full = (
             df_ash_full[df_ash_full["Sport"].astype(str) == selected_sport]
             if "Sport" in df_ash_full.columns
@@ -1016,241 +1016,188 @@ if testing_tab_ash is not None:
                 key=f"ash_tab_ath_{season_key}",
             )
 
-        ath_ash_base = sport_ash_full[sport_ash_full["Name"] == selected_ash_athlete].copy()
-        ath_ash_base["Date"] = pd.to_datetime(ath_ash_base["Date"], errors="coerce")
-
-        iso_col = next((c for c in ath_ash_base.columns if "isometric type" in c.lower()), None)
-        pos_col = next((c for c in ath_ash_base.columns if "position" in c.lower()), None)
-        l_col = next((c for c in ath_ash_base.columns if "force" in c.lower() and "(l)" in c.lower()), None)
-        r_col = next((c for c in ath_ash_base.columns if "force" in c.lower() and "(r)" in c.lower()), None)
-
-        if ath_ash_base.empty or not (iso_col and pos_col and l_col and r_col):
-            st.info(f"No ASH test data found for {selected_ash_athlete}.")
-        else:
-            ath_ash_base[pos_col] = ath_ash_base[pos_col].fillna("Standard").replace("", "Standard").astype(str)
-            ath_ash_base[iso_col] = ath_ash_base[iso_col].fillna("").astype(str)
-            ath_ash_base["L_Force"] = pd.to_numeric(ath_ash_base[l_col], errors="coerce")
-            ath_ash_base["R_Force"] = pd.to_numeric(ath_ash_base[r_col], errors="coerce")
-
-            # Order positions cleanly (I, Y, T first)
-            raw_positions = list(dict.fromkeys(ath_ash_base[pos_col].unique().tolist()))
-            preferred_order = ["I", "Y", "T"]
-            avail_positions = [p for p in preferred_order if any(p.lower() == rp.lower() for rp in raw_positions)]
-            avail_positions += [rp for rp in raw_positions if rp.lower() not in [p.lower() for p in preferred_order]]
-
-            with c_ash2:
-                selected_ash_pos = st.selectbox(
-                    "Test Position:",
-                    avail_positions,
-                    key=f"ash_tab_pos_{season_key}",
-                )
-
-            avail_ash_seasons = (
-                sorted(list(ath_ash_base["Season"].dropna().astype(str).unique()), reverse=True)
-                if "Season" in ath_ash_base.columns
-                else []
+        with c_ash2:
+            limb_view = st.radio(
+                "Limb Display:",
+                ["Both Limbs (L & R)", "Left Only", "Right Only"],
+                horizontal=True,
+                key=f"ash_limb_view_{season_key}",
             )
-            with c_ash3:
-                if avail_ash_seasons:
-                    default_ash_s = (
-                        [selected_season]
-                        if selected_season != "All Seasons" and selected_season in avail_ash_seasons
-                        else avail_ash_seasons
-                    )
-                    ash_seasons = st.multiselect(
-                        "Compare Seasons:",
-                        avail_ash_seasons,
-                        default=default_ash_s,
-                        key=f"ash_tab_seasons_{season_key}",
-                    )
-                else:
-                    ash_seasons = []
 
-            # Filter by position and selected seasons
-            p_ash = ath_ash_base[ath_ash_base[pos_col].str.lower() == selected_ash_pos.lower()].copy()
-            if ash_seasons and "Season" in p_ash.columns:
-                p_ash = p_ash[p_ash["Season"].astype(str).isin(ash_seasons)]
+        ath_ash_base = sport_ash_full[sport_ash_full["Name"] == selected_ash_athlete].copy()
+        if "Date" in ath_ash_base.columns:
+            ath_ash_base["Date"] = pd.to_datetime(ath_ash_base["Date"], errors="coerce")
 
-            p_ash = p_ash.dropna(subset=["Date"]).sort_values("Date")
-
-            supine_df = p_ash[p_ash[iso_col].str.contains("Supine", case=False, na=False)].copy()
-            prone_df = p_ash[p_ash[iso_col].str.contains("Prone", case=False, na=False)].copy()
-
-            if supine_df.empty and prone_df.empty:
-                st.info(f"No Supine or Prone ASH tests logged for {selected_ash_athlete} in Position {selected_ash_pos}.")
+        avail_ash_seasons = (
+            sorted(list(ath_ash_base["Season"].dropna().astype(str).unique()), reverse=True)
+            if "Season" in ath_ash_base.columns
+            else []
+        )
+        with c_ash3:
+            if avail_ash_seasons:
+                default_ash_s = (
+                    [selected_season]
+                    if selected_season != "All Seasons" and selected_season in avail_ash_seasons
+                    else avail_ash_seasons
+                )
+                ash_seasons = st.multiselect(
+                    "Compare Seasons:",
+                    avail_ash_seasons,
+                    default=default_ash_s,
+                    key=f"ash_tab_seasons_{season_key}",
+                )
             else:
-                # Aggregate by Date in case multiple trials exist on the same day
-                sup_daily = supine_df.groupby("Date", as_index=False)[["L_Force", "R_Force"]].max().sort_values("Date")
-                pro_daily = prone_df.groupby("Date", as_index=False)[["L_Force", "R_Force"]].max().sort_values("Date")
+                ash_seasons = []
 
-                st.markdown(f"#### Supine vs. Prone Peak Force Over Time — Position {selected_ash_pos}")
+        if ash_seasons and "Season" in ath_ash_base.columns:
+            p_ash = ath_ash_base[ath_ash_base["Season"].astype(str).isin(ash_seasons)].copy()
+        else:
+            p_ash = ath_ash_base.copy()
 
-                fig_ash_trend = go.Figure()
+        l_col = next((c for c in p_ash.columns if "force" in c.lower() and "(l)" in c.lower()), None)
+        r_col = next((c for c in p_ash.columns if "force" in c.lower() and "(r)" in c.lower()), None)
+        pos_col = next((c for c in p_ash.columns if "position" in c.lower()), None)
+        iso_col = next((c for c in p_ash.columns if "isometric type" in c.lower()), None)
+        type_col = next((c for c in p_ash.columns if "test type" in c.lower()), None)
 
-                # Supine Traces (Tennessee Orange)
-                if not sup_daily.empty:
-                    fig_ash_trend.add_trace(go.Scatter(
-                        x=sup_daily["Date"],
-                        y=sup_daily["L_Force"],
-                        name="Supine - Left",
-                        mode="lines+markers",
-                        connectgaps=True,
-                        line=dict(color="#FF8200", width=3.5),
-                        marker=dict(size=9, color="#FF8200", symbol="circle"),
-                    ))
-                    fig_ash_trend.add_trace(go.Scatter(
-                        x=sup_daily["Date"],
-                        y=sup_daily["R_Force"],
-                        name="Supine - Right",
-                        mode="lines+markers",
-                        connectgaps=True,
-                        line=dict(color="#FF8200", width=3, dash="dash"),
-                        marker=dict(size=9, color="#FFFFFF", line=dict(color="#FF8200", width=2.5)),
-                    ))
+        if p_ash.empty or not (l_col and r_col):
+            st.info(f"No ASH force data found for {selected_ash_athlete}.")
+        else:
+            p_ash = p_ash.dropna(subset=["Date"]).sort_values("Date")
+            p_ash["L_Force"] = pd.to_numeric(p_ash[l_col], errors="coerce")
+            p_ash["R_Force"] = pd.to_numeric(p_ash[r_col], errors="coerce")
 
-                # Prone Traces (Smokey Blue)
-                if not pro_daily.empty:
-                    fig_ash_trend.add_trace(go.Scatter(
-                        x=pro_daily["Date"],
-                        y=pro_daily["L_Force"],
-                        name="Prone - Left",
-                        mode="lines+markers",
-                        connectgaps=True,
-                        line=dict(color="#4895DB", width=3.5),
-                        marker=dict(size=9, color="#4895DB", symbol="diamond"),
-                    ))
-                    fig_ash_trend.add_trace(go.Scatter(
-                        x=pro_daily["Date"],
-                        y=pro_daily["R_Force"],
-                        name="Prone - Right",
-                        mode="lines+markers",
-                        connectgaps=True,
-                        line=dict(color="#4895DB", width=3, dash="dash"),
-                        marker=dict(size=9, color="#FFFFFF", symbol="diamond", line=dict(color="#4895DB", width=2.5)),
-                    ))
+            # Build a combined descriptor across Test Type, Isometric Type, and Position
+            def build_ash_label(row):
+                parts = []
+                for col in [type_col, iso_col, pos_col]:
+                    if col and pd.notna(row.get(col)):
+                        val = str(row.get(col)).strip()
+                        if val and val.lower() not in ["nan", "none", ""]:
+                            parts.append(val)
+                raw_str = " - ".join(parts) if parts else "ASH Test"
+                
+                # Standardize label cleanly (e.g., "Supine - I", "Prone - Y")
+                orientation = ""
+                if "supine" in raw_str.lower():
+                    orientation = "Supine"
+                elif "prone" in raw_str.lower():
+                    orientation = "Prone"
 
-                fig_ash_trend.update_layout(
-                    height=380,
-                    margin=dict(l=40, r=30, t=30, b=40),
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    hovermode="x unified",
-                    legend=dict(
-                        orientation="h",
-                        yanchor="bottom",
-                        y=1.05,
-                        xanchor="left",
-                        x=0.0,
-                        font=dict(size=13, color="#0F172A"),
-                    ),
-                    xaxis=dict(
-                        title=None,
-                        type="date",
-                        tickformat="%b %d\n%Y",
-                        showgrid=False,
-                        showline=True,
-                        linewidth=1.5,
-                        linecolor="#0F172A",
-                        tickfont=dict(color="#64748B", size=12),
-                    ),
-                    yaxis=dict(
-                        title="Peak Vertical Force (N)",
-                        showgrid=True,
-                        gridcolor="#E2E8F0",
-                        showline=True,
-                        linewidth=1.5,
-                        linecolor="#0F172A",
-                        tickfont=dict(color="#64748B", size=12),
-                    ),
+                pos_val = str(row.get(pos_col, "")).strip() if pos_col and pd.notna(row.get(pos_col)) else ""
+                if orientation and pos_val:
+                    return f"{orientation} ({pos_val})"
+                elif orientation:
+                    return orientation
+                elif pos_val:
+                    return pos_val
+                return raw_str
+
+            p_ash["Series_Label"] = p_ash.apply(build_ash_label, axis=1)
+
+            # Color palette: Warm tones for Supine, Cool tones for Prone
+            supine_palette = ["#FF8200", "#EA580C", "#F59E0B", "#DC2626"]
+            prone_palette = ["#4895DB", "#1D4ED8", "#0284C7", "#0D9488"]
+            neutral_palette = ["#334155", "#64748B", "#475569"]
+
+            sup_idx, pro_idx, neu_idx = 0, 0, 0
+            fig_ash_all = go.Figure()
+
+            # Sort labels so Supine I/Y/T come first, then Prone I/Y/T
+            unique_labels = sorted(
+                p_ash["Series_Label"].unique().tolist(),
+                key=lambda x: (
+                    0 if "supine" in x.lower() else (1 if "prone" in x.lower() else 2),
+                    x
                 )
+            )
 
-                st.plotly_chart(
-                    fig_ash_trend,
-                    use_container_width=True,
-                    config=LOCKED_CONFIG,
-                    key=f"ash_longitudinal_{selected_ash_athlete}_{selected_ash_pos}_{season_key}",
+            for lbl in unique_labels:
+                sub = (
+                    p_ash[p_ash["Series_Label"] == lbl]
+                    .groupby("Date", as_index=False)[["L_Force", "R_Force"]]
+                    .max()
+                    .sort_values("Date")
                 )
+                if sub.empty:
+                    continue
 
-                # --- SECOND GRAPH: SUPINE : PRONE RATIO OVER TIME ---
-                merged_ratio = pd.merge(
-                    sup_daily, pro_daily, on="Date", suffixes=("_Sup", "_Pro")
-                ).sort_values("Date")
+                if "supine" in lbl.lower():
+                    color = supine_palette[sup_idx % len(supine_palette)]
+                    marker_sym = "circle"
+                    sup_idx += 1
+                elif "prone" in lbl.lower():
+                    color = prone_palette[pro_idx % len(prone_palette)]
+                    marker_sym = "diamond"
+                    pro_idx += 1
+                else:
+                    color = neutral_palette[neu_idx % len(neutral_palette)]
+                    marker_sym = "square"
+                    neu_idx += 1
 
-                if not merged_ratio.empty:
-                    merged_ratio["L_Ratio"] = merged_ratio["L_Force_Sup"] / merged_ratio["L_Force_Pro"].replace(0, pd.NA)
-                    merged_ratio["R_Ratio"] = merged_ratio["R_Force_Sup"] / merged_ratio["R_Force_Pro"].replace(0, pd.NA)
-
-                    st.markdown(f"#### Supine : Prone Force Ratio Over Time — Position {selected_ash_pos}")
-                    fig_ash_ratio = go.Figure()
-
-                    fig_ash_ratio.add_hline(
-                        y=1.0,
-                        line_dash="dot",
-                        line_color="#64748B",
-                        annotation_text="1.00 (Equal Supine/Prone)",
-                        annotation_position="top left",
-                    )
-
-                    fig_ash_ratio.add_trace(go.Scatter(
-                        x=merged_ratio["Date"],
-                        y=merged_ratio["L_Ratio"],
-                        name="Left Supine:Prone Ratio",
+                if limb_view in ["Both Limbs (L & R)", "Left Only"]:
+                    fig_ash_all.add_trace(go.Scatter(
+                        x=sub["Date"],
+                        y=sub["L_Force"],
+                        name=f"{lbl} — L",
                         mode="lines+markers",
                         connectgaps=True,
-                        line=dict(color="#1D1D1F", width=3),
-                        marker=dict(size=8, color="#FF8200"),
+                        line=dict(color=color, width=3, dash="solid"),
+                        marker=dict(size=8, color=color, symbol=marker_sym),
                     ))
-                    fig_ash_ratio.add_trace(go.Scatter(
-                        x=merged_ratio["Date"],
-                        y=merged_ratio["R_Ratio"],
-                        name="Right Supine:Prone Ratio",
+
+                if limb_view in ["Both Limbs (L & R)", "Right Only"]:
+                    fig_ash_all.add_trace(go.Scatter(
+                        x=sub["Date"],
+                        y=sub["R_Force"],
+                        name=f"{lbl} — R",
                         mode="lines+markers",
                         connectgaps=True,
-                        line=dict(color="#64748B", width=3, dash="dash"),
-                        marker=dict(size=8, color="#4895DB"),
+                        line=dict(color=color, width=2.5, dash="dash"),
+                        marker=dict(size=8, color="#FFFFFF", symbol=marker_sym, line=dict(color=color, width=2)),
                     ))
 
-                    fig_ash_ratio.update_layout(
-                        height=300,
-                        margin=dict(l=40, r=30, t=25, b=40),
-                        plot_bgcolor="rgba(0,0,0,0)",
-                        paper_bgcolor="rgba(0,0,0,0)",
-                        hovermode="x unified",
-                        legend=dict(
-                            orientation="h",
-                            yanchor="bottom",
-                            y=1.05,
-                            xanchor="left",
-                            x=0.0,
-                            font=dict(size=12, color="#0F172A"),
-                        ),
-                        xaxis=dict(
-                            title=None,
-                            type="date",
-                            tickformat="%b %d\n%Y",
-                            showgrid=False,
-                            showline=True,
-                            linewidth=1.5,
-                            linecolor="#0F172A",
-                            tickfont=dict(color="#64748B", size=12),
-                        ),
-                        yaxis=dict(
-                            title="Supine / Prone Ratio",
-                            showgrid=True,
-                            gridcolor="#E2E8F0",
-                            showline=True,
-                            linewidth=1.5,
-                            linecolor="#0F172A",
-                            tickfont=dict(color="#64748B", size=12),
-                        ),
-                    )
+            fig_ash_all.update_layout(
+                height=460,
+                margin=dict(l=40, r=30, t=30, b=40),
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                hovermode="x unified",
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.04,
+                    xanchor="left",
+                    x=0.0,
+                    font=dict(size=12, color="#0F172A"),
+                ),
+                xaxis=dict(
+                    title=None,
+                    type="date",
+                    tickformat="%b %d\n%Y",
+                    showgrid=False,
+                    showline=True,
+                    linewidth=1.5,
+                    linecolor="#0F172A",
+                    tickfont=dict(color="#64748B", size=12),
+                ),
+                yaxis=dict(
+                    title="Peak Vertical Force (N)",
+                    showgrid=True,
+                    gridcolor="#E2E8F0",
+                    showline=True,
+                    linewidth=1.5,
+                    linecolor="#0F172A",
+                    tickfont=dict(color="#64748B", size=12),
+                ),
+            )
 
-                    st.plotly_chart(
-                        fig_ash_ratio,
-                        use_container_width=True,
-                        config=LOCKED_CONFIG,
-                        key=f"ash_ratio_{selected_ash_athlete}_{selected_ash_pos}_{season_key}",
-                    )
+            st.plotly_chart(
+                fig_ash_all,
+                use_container_width=True,
+                config=LOCKED_CONFIG,
+                key=f"ash_unified_chart_{selected_ash_athlete}_{limb_view}_{season_key}",
+            )
                     
 # ==========================================
 # SECTION 5B: CMJ JUMP TAB
