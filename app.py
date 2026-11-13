@@ -594,154 +594,154 @@ if testing_tab_intake is not None:
             if has_data:
                 # 6. ASH TEST (Matches Node 6 - Shoulders)
                 if not ash_ath_intake.empty:
-                with st.expander("ASH Log", expanded=False):
-                    target_cols_ash = [
-                        "Date", "Test Type", "Isometric Type", "Position", 
-                        "Peak Vertical Force [N] (L)", "Peak Vertical Force [N] (R)", 
-                        "Peak Vertical Force [N] (Asym)(%)"
-                    ]
-                    final_cols_ash = [c for c in target_cols_ash if c in ash_ath_intake.columns]
-                    df_ash_display = ash_ath_intake[final_cols_ash].copy()
-                    if "Date" in df_ash_display.columns:
-                        df_ash_display["Date"] = pd.to_datetime(df_ash_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
-                    for col in df_ash_display.columns:
-                        if "Force" in col or "Asym" in col:
-                            df_ash_display[col] = pd.to_numeric(df_ash_display[col], errors="coerce").apply(lambda x: f"{x:.1f}" if pd.notna(x) else pd.NA)
-                    df_ash_display = df_ash_display.dropna(axis=1, how='all').fillna("-")
-                    st.dataframe(df_ash_display, use_container_width=True, hide_index=True)
+                    with st.expander("ASH Log", expanded=False):
+                        target_cols_ash = [
+                            "Date", "Test Type", "Isometric Type", "Position", 
+                            "Peak Vertical Force [N] (L)", "Peak Vertical Force [N] (R)", 
+                            "Peak Vertical Force [N] (Asym)(%)"
+                        ]
+                        final_cols_ash = [c for c in target_cols_ash if c in ash_ath_intake.columns]
+                        df_ash_display = ash_ath_intake[final_cols_ash].copy()
+                        if "Date" in df_ash_display.columns:
+                            df_ash_display["Date"] = pd.to_datetime(df_ash_display["Date"], errors='coerce').dt.strftime("%b %d, %Y")
+                        for col in df_ash_display.columns:
+                            if "Force" in col or "Asym" in col:
+                                df_ash_display[col] = pd.to_numeric(df_ash_display[col], errors="coerce").apply(lambda x: f"{x:.1f}" if pd.notna(x) else pd.NA)
+                        df_ash_display = df_ash_display.dropna(axis=1, how='all').fillna("-")
+                        st.dataframe(df_ash_display, use_container_width=True, hide_index=True)
 
-                # --- NEW: SUPINE VS. PRONE ASH COMPARISON GRAPH ---
-                iso_col = next((c for c in ash_ath_intake.columns if "isometric type" in c.lower()), None)
-                pos_col = next((c for c in ash_ath_intake.columns if "position" in c.lower()), None)
-                l_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(l)" in c.lower()), None)
-                r_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(r)" in c.lower()), None)
+                    # --- NEW: SUPINE VS. PRONE ASH COMPARISON GRAPH ---
+                    iso_col = next((c for c in ash_ath_intake.columns if "isometric type" in c.lower()), None)
+                    pos_col = next((c for c in ash_ath_intake.columns if "position" in c.lower()), None)
+                    l_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(l)" in c.lower()), None)
+                    r_col = next((c for c in ash_ath_intake.columns if "force" in c.lower() and "(r)" in c.lower()), None)
 
-                if iso_col and pos_col and l_col and r_col:
-                    st.markdown("#### Supine vs. Prone ASH Force Comparison")
-                    ash_metric_mode = st.radio(
-                        "Comparison Basis",
-                        ["Season Peak", "Most Recent"],
-                        horizontal=True,
-                        key=f"ash_chart_mode_{season_key}"
-                    )
+                    if iso_col and pos_col and l_col and r_col:
+                        st.markdown("#### Supine vs. Prone ASH Force Comparison")
+                        ash_metric_mode = st.radio(
+                            "Comparison Basis",
+                            ["Season Peak", "Most Recent"],
+                            horizontal=True,
+                            key=f"ash_chart_mode_{season_key}"
+                        )
 
-                    df_ash_plot = ash_ath_intake.copy()
-                    df_ash_plot["L_Force"] = pd.to_numeric(df_ash_plot[l_col], errors="coerce").fillna(0.0)
-                    df_ash_plot["R_Force"] = pd.to_numeric(df_ash_plot[r_col], errors="coerce").fillna(0.0)
-                    df_ash_plot[pos_col] = df_ash_plot[pos_col].fillna("Standard").replace("", "Standard").astype(str)
-                    df_ash_plot[iso_col] = df_ash_plot[iso_col].fillna("").astype(str)
+                        df_ash_plot = ash_ath_intake.copy()
+                        df_ash_plot["L_Force"] = pd.to_numeric(df_ash_plot[l_col], errors="coerce").fillna(0.0)
+                        df_ash_plot["R_Force"] = pd.to_numeric(df_ash_plot[r_col], errors="coerce").fillna(0.0)
+                        df_ash_plot[pos_col] = df_ash_plot[pos_col].fillna("Standard").replace("", "Standard").astype(str)
+                        df_ash_plot[iso_col] = df_ash_plot[iso_col].fillna("").astype(str)
 
-                    # Extract Supine and Prone subsets
-                    supine_df = df_ash_plot[df_ash_plot[iso_col].str.contains("Supine", case=False, na=False)]
-                    prone_df = df_ash_plot[df_ash_plot[iso_col].str.contains("Prone", case=False, na=False)]
+                        # Extract Supine and Prone subsets
+                        supine_df = df_ash_plot[df_ash_plot[iso_col].str.contains("Supine", case=False, na=False)]
+                        prone_df = df_ash_plot[df_ash_plot[iso_col].str.contains("Prone", case=False, na=False)]
 
-                    if not supine_df.empty or not prone_df.empty:
-                        # Preserve standard I-Y-T order if present, then append any other positions
-                        raw_positions = list(dict.fromkeys(
+                        if not supine_df.empty or not prone_df.empty:
+                            # Preserve standard I-Y-T order if present, then append any other positions
+                            raw_positions = list(dict.fromkeys(
                             supine_df[pos_col].tolist() + prone_df[pos_col].tolist()
-                        ))
-                        preferred_order = ["I", "Y", "T"]
-                        positions = [p for p in preferred_order if any(p.lower() == rp.lower() for rp in raw_positions)]
-                        positions += [rp for rp in raw_positions if rp.lower() not in [p.lower() for p in preferred_order]]
+                            ))
+                            preferred_order = ["I", "Y", "T"]
+                            positions = [p for p in preferred_order if any(p.lower() == rp.lower() for rp in raw_positions)]
+                            positions += [rp for rp in raw_positions if rp.lower() not in [p.lower() for p in preferred_order]]
 
-                        def get_pos_forces(sub_df, pos_name):
-                            matches = sub_df[sub_df[pos_col].str.lower() == pos_name.lower()].sort_values("Date")
-                            if matches.empty:
-                                return 0.0, 0.0
-                            if ash_metric_mode == "Season Peak":
-                                return matches["L_Force"].max(), matches["R_Force"].max()
-                            else:
-                                return matches.iloc[-1]["L_Force"], matches.iloc[-1]["R_Force"]
+                            def get_pos_forces(sub_df, pos_name):
+                                matches = sub_df[sub_df[pos_col].str.lower() == pos_name.lower()].sort_values("Date")
+                                if matches.empty:
+                                    return 0.0, 0.0
+                                if ash_metric_mode == "Season Peak":
+                                    return matches["L_Force"].max(), matches["R_Force"].max()
+                                else:
+                                    return matches.iloc[-1]["L_Force"], matches.iloc[-1]["R_Force"]
 
-                        sup_L, sup_R, pro_L, pro_R = [], [], [], []
-                        for p in positions:
-                            sl, sr = get_pos_forces(supine_df, p)
-                            pl, pr = get_pos_forces(prone_df, p)
-                            sup_L.append(sl)
-                            sup_R.append(sr)
-                            pro_L.append(pl)
-                            pro_R.append(pr)
+                            sup_L, sup_R, pro_L, pro_R = [], [], [], []
+                            for p in positions:
+                                sl, sr = get_pos_forces(supine_df, p)
+                                pl, pr = get_pos_forces(prone_df, p)
+                                sup_L.append(sl)
+                                sup_R.append(sr)
+                                pro_L.append(pl)
+                                pro_R.append(pr)
 
-                        fig_ash = go.Figure()
+                            fig_ash = go.Figure()
 
-                        # Supine Traces (Tennessee Orange)
-                        fig_ash.add_trace(go.Bar(
-                            name="Supine - Left",
-                            x=positions,
-                            y=sup_L,
-                            marker_color="#FF8200",
-                            text=[f"{v:.0f}N" if v > 0 else "" for v in sup_L],
-                            textposition="outside"
-                        ))
-                        fig_ash.add_trace(go.Bar(
-                            name="Supine - Right",
-                            x=positions,
-                            y=sup_R,
-                            marker_color="#FDBA74",
-                            text=[f"{v:.0f}N" if v > 0 else "" for v in sup_R],
-                            textposition="outside"
-                        ))
+                            # Supine Traces (Tennessee Orange)
+                            fig_ash.add_trace(go.Bar(
+                                name="Supine - Left",
+                                x=positions,
+                                y=sup_L,
+                                marker_color="#FF8200",
+                                text=[f"{v:.0f}N" if v > 0 else "" for v in sup_L],
+                                textposition="outside"
+                            ))
+                            fig_ash.add_trace(go.Bar(
+                                name="Supine - Right",
+                                x=positions,
+                                y=sup_R,
+                                marker_color="#FDBA74",
+                                text=[f"{v:.0f}N" if v > 0 else "" for v in sup_R],
+                                textposition="outside"
+                            ))
 
-                        # Prone Traces (Smokey Blue)
-                        fig_ash.add_trace(go.Bar(
-                            name="Prone - Left",
-                            x=positions,
-                            y=pro_L,
-                            marker_color="#4895DB",
-                            text=[f"{v:.0f}N" if v > 0 else "" for v in pro_L],
-                            textposition="outside"
-                        ))
-                        fig_ash.add_trace(go.Bar(
-                            name="Prone - Right",
-                            x=positions,
-                            y=pro_R,
-                            marker_color="#93C5FD",
-                            text=[f"{v:.0f}N" if v > 0 else "" for v in pro_R],
-                            textposition="outside"
-                        ))
+                            # Prone Traces (Smokey Blue)
+                            fig_ash.add_trace(go.Bar(
+                                name="Prone - Left",
+                                x=positions,
+                                y=pro_L,
+                                marker_color="#4895DB",
+                                text=[f"{v:.0f}N" if v > 0 else "" for v in pro_L],
+                                textposition="outside"
+                            ))
+                            fig_ash.add_trace(go.Bar(
+                                name="Prone - Right",
+                                x=positions,
+                                y=pro_R,
+                                marker_color="#93C5FD",
+                                text=[f"{v:.0f}N" if v > 0 else "" for v in pro_R],
+                                textposition="outside"
+                            ))
 
-                        max_force = max(sup_L + sup_R + pro_L + pro_R + [100])
-                        fig_ash.update_layout(
-                            barmode="group",
-                            height=380,
-                            margin=dict(l=40, r=20, t=40, b=40),
-                            plot_bgcolor="rgba(0,0,0,0)",
-                            paper_bgcolor="rgba(0,0,0,0)",
-                            legend=dict(
-                                orientation="h",
-                                yanchor="bottom",
-                                y=1.04,
-                                xanchor="left",
-                                x=0.0,
-                                font=dict(size=12, color="#1D1D1F")
-                            ),
-                            xaxis=dict(
-                                title="Test Position",
-                                showgrid=False,
-                                showline=True,
-                                linewidth=1.5,
-                                linecolor="#0F172A",
-                                tickfont=dict(size=13, color="#1D1D1F")
-                            ),
-                            yaxis=dict(
-                                title="Peak Vertical Force (N)",
-                                range=[0, max_force * 1.18],
-                                showgrid=True,
-                                gridcolor="#E2E8F0",
-                                showline=True,
-                                linewidth=1.5,
-                                linecolor="#0F172A",
-                                tickfont=dict(size=12, color="#64748B")
+                            max_force = max(sup_L + sup_R + pro_L + pro_R + [100])
+                            fig_ash.update_layout(
+                                barmode="group",
+                                height=380,
+                                margin=dict(l=40, r=20, t=40, b=40),
+                                plot_bgcolor="rgba(0,0,0,0)",
+                                paper_bgcolor="rgba(0,0,0,0)",
+                                legend=dict(
+                                    orientation="h",
+                                    yanchor="bottom",
+                                    y=1.04,
+                                    xanchor="left",
+                                    x=0.0,
+                                    font=dict(size=12, color="#1D1D1F")
+                                ),
+                                xaxis=dict(
+                                    title="Test Position",
+                                    showgrid=False,
+                                    showline=True,
+                                    linewidth=1.5,
+                                    linecolor="#0F172A",
+                                    tickfont=dict(size=13, color="#1D1D1F")
+                                ),
+                                yaxis=dict(
+                                    title="Peak Vertical Force (N)",
+                                    range=[0, max_force * 1.18],
+                                    showgrid=True,
+                                    gridcolor="#E2E8F0",
+                                    showline=True,
+                                    linewidth=1.5,
+                                    linecolor="#0F172A",
+                                    tickfont=dict(size=12, color="#64748B")
+                                )   
                             )
-                        )
 
-                        st.plotly_chart(
-                            fig_ash,
-                            use_container_width=True,
-                            config=LOCKED_CONFIG,
-                            key=f"ash_supine_prone_chart_{selected_intake_athlete}_{season_key}"
-                        )
-
+                            st.plotly_chart(
+                                fig_ash,
+                                use_container_width=True,
+                                config=LOCKED_CONFIG,
+                                key=f"ash_supine_prone_chart_{selected_intake_athlete}_{season_key}"
+                            )
+                        
                 # 8. GRIP STRENGTH (Matches Node 8 - Hands)
                 if not grip_ath.empty:
                     l_col_grip = "L Max Force (N)" if "L Max Force (N)" in grip_ath.columns else next((c for c in grip_ath.columns if "l max" in c.lower()), None)
